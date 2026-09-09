@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minhas rotas — Motoboy</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex admin-page">
+  <header th:replace="~{fragments/motoboy-nav :: nav}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8" style="max-width:520px;">
+    <h1 class="text-base font-semibold mb-4">Minhas rotas</h1>
+
+    <div id="rotas-vazio" class="card p-4" hidden>
+      <p>Nenhuma rota disponível no momento.</p>
+    </div>
+
+    <div id="rotas-lista" class="stack gap-16"></div>
+  </main>
+
+  <script defer th:src="@{/js/admin/auth.js}"></script>
+  <script defer th:src="@{/js/pages/motoboy/rotas.js}"></script>
+</body>
+</html>

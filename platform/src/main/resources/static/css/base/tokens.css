@@ -1,0 +1,65 @@
+/* 🎛 TOKENS — design system (cores, tipografia, spacing, sombras)
+   Adaptado do ParaisoPet: mesmos nomes de variável (todo o resto do CSS
+   copiado de lá — buttons/cards/forms/product-cards/layout — depende
+   delas), valores trocados pra paleta da logo do Rota das Praias:
+   preto + dourado + branco. */
+:root {
+  /* Brand & feedback */
+  --color-primary:#F6C500;
+  --color-primary-hover:#D9AC00;
+  --color-secondary:#171717;
+  --color-success:#16a34a;
+  --color-error:#dc2626;
+  --color-warning:#f59e0b;
+
+  /* Neutros */
+  --color-neutral-1:#ffffff;
+  --color-neutral-2:#f7f5ef;
+  --color-neutral-3:#e8e3d6;
+  --color-neutral-4:#c9c2ab;
+  --color-neutral-5:#5c5648;
+  --color-dark:#0b0b0b;
+  --color-light:#fffdf5;
+
+  /* Tipografia */
+  --font-sans:'Source Sans 3', system-ui, Segoe UI, Roboto, Arial, "Noto Sans";
+  --font-display:'Anton', 'Source Sans 3', system-ui, Segoe UI, Roboto, Arial, "Noto Sans";
+  --font-size-xs:.75rem; --font-size-sm:.875rem; --font-size-base:1rem;
+  --font-size-lg:1.125rem; --font-size-xl:1.25rem; --font-size-2xl:1.5rem;
+
+  /* Espaçamento */
+  --gap-4:.25rem; --gap-8:.5rem; --gap-12:.75rem; --gap-16:1rem;
+  --gap-24:1.5rem; --gap-32:2rem; --gap-48:3rem; --gap-64:4rem;
+
+  /* Radius */
+  --radius-sm:10px; --radius-md:14px; --radius-lg:18px; --radius-xl:24px; --radius-full:999px;
+
+  /* Icon sizes */
+  --icon-size-sm:16px; --icon-size-md:20px; --icon-size-lg:24px;
+
+  /* Sombras */
+  --shadow-0:none;
+  --shadow-1:0 2px 8px rgba(18,18,18,.10);
+  --shadow-2:0 12px 28px rgba(18,18,18,.14);
+  --shadow-3:0 18px 44px rgba(18,18,18,.18);
+  --shadow-inset:inset 0 1px 3px rgba(18,18,18,.08);
+
+  /* Layout */
+  --container-max:1200px;
+  --page-pad:clamp(16px, 2.5vw, 28px);
+  --layout-bg:var(--color-neutral-2);
+  --layout-card:var(--color-neutral-1);
+  --layout-dark:var(--color-dark);
+  --layout-accent:var(--color-primary);
+  --layout-accent-hover:var(--color-primary-hover);
+  --layout-border:var(--color-neutral-3);
+  --layout-radius:var(--radius-lg);
+  --layout-shadow:var(--shadow-3);
+
+  /* Transições & foco */
+  --transition-fast:150ms ease-in; --transition-base:300ms ease-in-out; --transition-slow:500ms ease;
+  --focus-ring:0 0 0 3px color-mix(in oklab, var(--color-primary) 45%, transparent);
+
+  /* Ações específicas */
+  --action-500:#F6C500; --action-600:#D9AC00; --action-700:#B08E00;
+}

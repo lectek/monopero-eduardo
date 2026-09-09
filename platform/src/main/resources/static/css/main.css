@@ -1,0 +1,58 @@
+/* main.css — adaptado do ParaisoPet, mesma estrutura de imports.
+   Removidas as páginas que não existem aqui (hospedagem, admin-area,
+   painel, cadastro-cliente antigo etc.) — trocado theme/paraisopet.css
+   por theme/mini-mercadinho.css. */
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+/* Tokens e base */
+@import url('./base/tokens.css');
+@import url('./base/global.css');
+@import url('./base/reset.css');
+@import url('./base/typography.css');
+
+/* Componentes */
+@import url('./components/icons.css');
+@import url('./components/buttons.css');
+@import url('./components/cards.css');
+@import url('./components/chips.css');
+@import url('./components/badges.css');
+@import url('./components/tags.css');
+@import url('./components/alerts.css');
+@import url('./components/pagination.css');
+@import url('./components/status.css');
+@import url('./components/forms.css');
+@import url('./components/product-cards.css');
+
+/* Layout */
+@import url('./layout/header.css');
+@import url('./layout/header-mobile.css');
+@import url('./layout/footer.css');
+@import url('./layout/layout.css');
+
+/* Páginas */
+@import url('./pages/store-home.css');
+@import url('./pages/produtos.css');
+@import url('./pages/carrinho.css');
+@import url('./pages/checkout.css');
+
+/* Utilitários */
+@import url('./utilities/text.css');
+@import url('./utilities/padding.css');
+@import url('./utilities/margin.css');
+@import url('./utilities/color.css');
+@import url('./utilities/dimension.css');
+@import url('./utilities/flex.css');
+@import url('./utilities/grid.css');
+@import url('./utilities/z-index.css');
+@import url('./utilities/animations.css');
+
+/* Identidade visual Rota das Praias */
+@import url('./theme/mini-mercadinho.css');
+
+/* Correções responsivas globais */
+@import url('./responsive.css');
+@import url('./mobile-final.css');
+
+html { background: var(--layout-bg, #f7f5ef); }

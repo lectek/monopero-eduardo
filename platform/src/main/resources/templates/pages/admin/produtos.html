@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Produtos — Painel Admin</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex admin-page">
+  <header th:replace="~{fragments/admin-nav :: nav}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8">
+    <h1 class="text-base font-semibold mb-4">Produtos</h1>
+    <p style="margin-bottom:1rem;">
+      Só leitura — estoque, preço e cadastro dos produtos são gerenciados no
+      próprio IMS (tela "Modificar produtos"), o mesmo sistema do caixa.
+    </p>
+
+    <div id="produtos-vazio" class="card p-4" hidden>
+      <p>Nenhum produto cadastrado ainda.</p>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table id="tabela-produtos" hidden>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cor</th>
+            <th>Peso</th>
+            <th>Estoque</th>
+            <th>Preço</th>
+            <th>Código de barras</th>
+            <th>Na vitrine?</th>
+          </tr>
+        </thead>
+        <tbody id="produtos-corpo"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script defer th:src="@{/js/admin/auth.js}"></script>
+  <script defer th:src="@{/js/pages/admin/produtos.js}"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+/* ====================================
+   ✍️ TYPOGRAPHY.CSS — Estilos Tipográficos Profissionais
+   Escalável, responsivo e acessível
+   ==================================== */
+
+/* Fonte base e altura da linha */
+body {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--color-primary-text);
+  background-color: var(--color-neutral-1);
+}
+
+/* Cabeçalhos com hierarquia visual */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: var(--layout-dark);
+}
+
+h1 { font-size: 2.5rem; } /* 40px */
+h2 { font-size: 2.1rem; }
+h3 { font-size: 1.62rem; }
+h4 { font-size: 1.35rem;}
+h5 { font-size: 1.2rem;}
+h6 { font-size: 1.0625rem; }
+
+p {
+  margin-bottom: 1rem;
+  font-size: 1.0625rem;
+  color: var(--layout-dark);
+}
+
+strong {
+  font-weight: 600;
+}
+
+em {
+  font-style: italic;
+}
+
+small {
+  font-size: 0.875rem;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  transition: color 0.2s ease-in-out;
+}
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Listas */
+ul, ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+li {
+  margin-bottom: 0.5rem;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid var(--color-primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: var(--color-neutral-5);
+}
+
+/* Código e pré-formatado */
+code {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: var(--color-neutral-2);
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+}
+
+pre {
+  background-color: var(--color-neutral-2);
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+}
+
+/* Tabelas */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+th, td {
+  padding: 0.75rem;
+  border: 1px solid var(--color-neutral-3);
+  text-align: left;
+}
+thead {
+  background-color: var(--color-neutral-2);
+  font-weight: 600;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.5rem; }
+  h4, h5, h6 { font-size: 1.125rem; }
+}
+
+/* Modo escuro automático */
+@media (prefers-color-scheme: dark) {
+  body {
+    color: var(--color-light);
+    background-color: var(--color-neutral-2);
+  }
+
+  a {
+    color: var(--color-secondary);
+  }
+
+  blockquote {
+    color: var(--color-neutral-4);
+    border-left-color: var(--color-secondary);
+  }
+
+  code, pre {
+    background-color: #1f2937;
+    color: var(--color-neutral-1);
+  }
+
+  table th,
+  table td {
+    border-color: var(--color-neutral-4);
+  }
+}

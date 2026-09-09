@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Termos de Serviço — Rota das Praias</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex">
+  <header th:replace="~{fragments/header :: header}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8">
+    <div class="card p-4 stack gap-16" style="max-width:720px;margin-inline:auto;">
+      <h1 class="text-base font-semibold">Termos de Serviço</h1>
+      <p>Última atualização: setembro de 2026.</p>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Sobre este site</h2>
+        <p>
+          Este site é o canal de compras online da <span th:text="${@appProps.storeDisplayName}">Rota das Praias</span>,
+          loja física em <span th:text="${@appProps.addressDisplay}">João Pessoa/PB</span>. Ao usar o site
+          e fazer um pedido, você concorda com estes termos.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Pedidos</h2>
+        <ul>
+          <li>Os preços e a disponibilidade dos produtos são os mesmos praticados na loja física, atualizados em tempo real;</li>
+          <li>Você pode retirar o pedido na loja ou pedir entrega, dependendo da disponibilidade na sua região;</li>
+          <li>O pedido só é confirmado após a confirmação do pagamento (Pix) ou do pagamento na retirada/entrega (dinheiro).</li>
+        </ul>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Pagamento</h2>
+        <p>
+          Pagamentos via Pix são processados pelo Mercado Pago. Também aceitamos
+          pagamento em dinheiro na retirada ou entrega.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Cancelamento e trocas</h2>
+        <p>
+          Em caso de problemas com seu pedido (produto errado, em falta ou com
+          defeito), entre em contato pelo WhatsApp
+          <span th:text="${@appProps.whatsappDisplay}">(83) 99927-6452</span> assim que possível
+          para resolvermos.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Sua conta</h2>
+        <p>
+          Você é responsável por manter sua senha em segurança. Se preferir, pode
+          entrar com sua conta Google em vez de criar uma senha própria.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Contato</h2>
+        <p>
+          Dúvidas sobre estes termos: WhatsApp
+          <span th:text="${@appProps.whatsappDisplay}">(83) 99927-6452</span>.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

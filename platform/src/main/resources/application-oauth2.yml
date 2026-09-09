@@ -1,0 +1,23 @@
+# Login do cliente com Google — só ativa com o profile "oauth2" (ex.:
+# SPRING_PROFILES_ACTIVE=docker,oauth2), pra nunca tentar resolver
+# OAUTH_GOOGLE_CLIENT_ID/SECRET quando eles não existem (dev local, ou
+# produção antes de cadastrar as credenciais no Google Cloud Console).
+# Sem redirect-uri fixo: usa o padrão do Spring ({baseUrl}/login/oauth2/code/google),
+# que se adapta sozinho ao domínio real da loja quando ele for definido.
+spring:
+  config:
+    activate:
+      on-profile: oauth2
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+            scope:
+              - profile
+              - email
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com

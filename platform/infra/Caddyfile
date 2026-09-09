@@ -1,0 +1,11 @@
+# Proxy reverso com HTTPS automático (Let's Encrypt) pro domínio da loja.
+# O Caddy pede/renova o certificado sozinho na primeira vez que alguém acessa
+# https://mercadinhorota.duckdns.org — só precisa que a porta 80 esteja
+# alcançável da internet (fase do desafio HTTP-01) e que o domínio já esteja
+# apontando pro IP certo (ver serviço "duckdns" no docker-compose.yml).
+mercadinhorota.duckdns.org {
+	reverse_proxy saas:8080
+}
+
+# Acesso local por IP/porta direta (sem certificado) continua liberado —
+# http://IP-DA-MAQUINA:8080 — útil pra testar sem depender de DNS/HTTPS.

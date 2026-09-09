@@ -1,0 +1,13 @@
+target/
+*.class
+*.log
+platform/.env
+pdv/ims_files/config.properties
+**/*.db-shm
+**/*.db-wal
+**/*.db-journal
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

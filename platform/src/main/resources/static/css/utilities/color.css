@@ -1,0 +1,73 @@
+/* ===============================
+   UTILITÁRIOS DE CORES
+   Arquivo: utilities/color.css
+   Projeto: HotelPet (LekTeC)
+=============================== */
+
+/* 🎨 Background */
+.bg-white        { background-color: var(--color-neutral-1); }
+.bg-black        { background-color: var(--color-dark); }
+.bg-gray-100     { background-color: var(--color-neutral-2); }
+.bg-gray-200     { background-color: var(--color-neutral-3); }
+.bg-gray-300     { background-color: var(--color-neutral-4); }
+.bg-gray-400     { background-color: var(--color-neutral-5); }
+.bg-primary      { background-color: var(--color-primary); }
+.bg-primary-hover{ background-color: var(--color-primary-hover); }
+.bg-secondary    { background-color: var(--color-secondary); }
+.bg-success      { background-color: var(--color-success); }
+.bg-danger       { background-color: var(--color-error); }
+.bg-warning      { background-color: var(--color-warning); }
+.bg-light        { background-color: var(--color-light); }
+.bg-dark         { background-color: var(--color-dark); }
+.bg-transparent  { background-color: transparent; }
+
+/* ✍️ Texto */
+.text-white      { color: var(--color-neutral-1); }
+.text-black      { color: var(--color-dark); }
+.text-gray-100   { color: var(--color-neutral-2); }
+.text-gray-200   { color: var(--color-neutral-3); }
+.text-gray-300   { color: var(--color-neutral-4); }
+.text-gray-400   { color: var(--color-neutral-5); }
+.text-primary    { color: var(--color-primary); }
+.text-secondary  { color: var(--color-secondary); }
+.text-success    { color: var(--color-success); }
+.text-danger     { color: var(--color-error); }
+.text-warning    { color: var(--color-warning); }
+.text-light      { color: var(--color-light); }
+.text-dark       { color: var(--color-dark); }
+
+/* 🔲 Bordas */
+.border-white    { border-color: var(--color-neutral-1); }
+.border-black    { border-color: var(--color-dark); }
+.border-gray-100 { border-color: var(--color-neutral-2); }
+.border-gray-200 { border-color: var(--color-neutral-3); }
+.border-gray-300 { border-color: var(--color-neutral-4); }
+.border-gray-400 { border-color: var(--color-neutral-5); }
+.border-primary  { border-color: var(--color-primary); }
+.border-secondary{ border-color: var(--color-secondary); }
+.border-success  { border-color: var(--color-success); }
+.border-danger   { border-color: var(--color-error); }
+.border-warning  { border-color: var(--color-warning); }
+.border-light    { border-color: var(--color-light); }
+.border-dark     { border-color: var(--color-dark); }
+
+/* 🌫️ Opacidade */
+.opacity-100 { opacity: 1; }
+.opacity-90  { opacity: .9; }
+.opacity-80  { opacity: .8; }
+.opacity-70  { opacity: .7; }
+.opacity-60  { opacity: .6; }
+.opacity-50  { opacity: .5; }
+.opacity-40  { opacity: .4; }
+.opacity-30  { opacity: .3; }
+.opacity-20  { opacity: .2; }
+.opacity-10  { opacity: .1; }
+.opacity-0   { opacity: 0; }
+
+/* 🌓 Dark mode (ajustes automáticos) */
+@media (prefers-color-scheme: dark) {
+  .bg-white    { background-color: #1e293b; }
+  .text-black  { color: #f1f5f9; }
+  .border-gray-200 { border-color: #334155; }
+}
+

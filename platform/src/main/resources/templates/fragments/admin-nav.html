@@ -1,0 +1,17 @@
+<!-- Nav do painel admin — separado do header da vitrine (sem carrinho/WhatsApp/login de cliente). -->
+<header class="site-header admin-page" role="banner" th:fragment="nav">
+  <div class="header-inner container-fluid">
+    <a th:href="@{/admin/pedidos}" class="logo-link header-brand" aria-label="Painel admin">
+      <img class="brand-logo brand-logo--small" th:src="@{/images/logo-rota-das-praias.png}" alt="Rota das Praias" />
+    </a>
+    <span class="text-base font-semibold">Painel Admin</span>
+    <nav aria-label="Menu do painel admin" style="margin-left:auto;">
+      <ul class="nav-list" style="display:flex;gap:1rem;list-style:none;align-items:center;">
+        <li><a th:href="@{/admin/pedidos}" class="menu-button">Pedidos</a></li>
+        <li><a th:href="@{/admin/entregas}" class="menu-button">Entregas</a></li>
+        <li><a th:href="@{/admin/produtos}" class="menu-button">Produtos</a></li>
+        <li><button id="admin-logout" class="btn" type="button">Sair</button></li>
+      </ul>
+    </nav>
+  </div>
+</header>

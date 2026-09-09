@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Política de Privacidade — Rota das Praias</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex">
+  <header th:replace="~{fragments/header :: header}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8">
+    <div class="card p-4 stack gap-16" style="max-width:720px;margin-inline:auto;">
+      <h1 class="text-base font-semibold">Política de Privacidade</h1>
+      <p>Última atualização: setembro de 2026.</p>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Quem somos</h2>
+        <p>
+          Este site pertence à <span th:text="${@appProps.storeDisplayName}">Rota das Praias</span>,
+          loja física localizada em <span th:text="${@appProps.addressDisplay}">João Pessoa/PB</span>.
+          Dúvidas sobre esta política podem ser tiradas pelo WhatsApp
+          <span th:text="${@appProps.whatsappDisplay}">(83) 99927-6452</span>.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Quais dados coletamos</h2>
+        <p>Quando você cria uma conta, faz um pedido ou entra com sua conta Google, guardamos:</p>
+        <ul>
+          <li>Nome, e-mail e telefone/WhatsApp;</li>
+          <li>Endereço de entrega, quando você pede entrega em vez de retirada na loja;</li>
+          <li>Histórico dos pedidos feitos pelo site (itens, valores, forma de pagamento);</li>
+          <li>Se você entra com o Google, recebemos apenas seu nome e e-mail — nunca sua senha do Google.</li>
+        </ul>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Para que usamos esses dados</h2>
+        <ul>
+          <li>Processar e entregar seu pedido;</li>
+          <li>Confirmar pagamentos feitos via Pix (Mercado Pago);</li>
+          <li>Entrar em contato sobre um pedido em andamento;</li>
+          <li>Permitir que você entre na sua conta e veja seus pedidos.</li>
+        </ul>
+        <p>Não vendemos nem compartilhamos seus dados com terceiros para fins de marketing.</p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Onde seus dados ficam guardados</h2>
+        <p>
+          Seus dados ficam no banco de dados da própria loja — o mesmo sistema que
+          controla o estoque e as vendas no caixa físico. Pagamentos por Pix são
+          processados pelo Mercado Pago, que tem sua própria política de privacidade.
+        </p>
+      </div>
+
+      <div class="stack gap-8">
+        <h2 class="text-base font-semibold">Seus direitos</h2>
+        <p>
+          Você pode pedir a qualquer momento, pelo WhatsApp, para corrigir seus dados
+          cadastrais ou para que sua conta e seu histórico sejam apagados, conforme a
+          Lei Geral de Proteção de Dados (LGPD).
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

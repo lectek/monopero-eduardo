@@ -1,0 +1,37 @@
+/* Checkout — escrito do zero, formulário simples (o checkout.css do
+ * ParaisoPet é pra uma "janela" de checkout multi-etapa muito específica
+ * daquele fluxo de sessão; aqui é um formulário único que posta pra
+ * POST /api/public/pedidos). */
+
+.checkout-page main { padding-block: clamp(16px, 3vw, 32px); }
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: var(--gap-24);
+  align-items: start;
+  margin-top: var(--gap-16);
+}
+
+.checkout-grid form h2 { margin-top: var(--gap-8); }
+.checkout-grid form h2:first-of-type { margin-top: 0; }
+
+#checkout-itens .checkout-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap-8);
+  font-size: var(--font-size-sm);
+  padding-block: 4px;
+  border-bottom: 1px solid var(--layout-border);
+}
+
+#resultado-pix {
+  margin-top: var(--gap-16);
+  display: grid;
+  gap: var(--gap-12);
+  justify-items: start;
+}
+
+@media (max-width: 820px) {
+  .checkout-grid { grid-template-columns: 1fr; }
+}

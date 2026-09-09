@@ -1,0 +1,40 @@
+/* ============================
+   UTILITÁRIO: Z-INDEX
+   Autor: LekTeC / Alex Morais
+   Descrição: Utilidades de camadas para controle de sobreposição
+   ============================ */
+
+/* 🧱 Base */
+.z-0     { z-index: 0; }
+.z-10    { z-index: 10; }
+.z-20    { z-index: 20; }
+.z-30    { z-index: 30; }
+.z-40    { z-index: 40; }
+.z-50    { z-index: 50; }
+
+/* 💡 Elementos de interface */
+.z-overlay       { z-index: 1000; }  /* modais, overlays escurecidos */
+.z-navbar        { z-index: 1050; }  /* topo fixo (navbar, header fixo) */
+.z-dropdown      { z-index: 1100; }  /* menus dropdown */
+.z-tooltip       { z-index: 1150; }  /* balões de ajuda */
+.z-popup         { z-index: 1200; }  /* janelas ou painéis flutuantes */
+.z-alert         { z-index: 1250; }  /* alertas flutuantes */
+.z-toast         { z-index: 1300; }  /* notificações no canto */
+.z-loader        { z-index: 1400; }  /* loader cobrindo a tela */
+
+/* 🛑 Prioridades */
+.z-fixed-top     { z-index: 1500 !important; }
+.z-absolute-top  { z-index: 1600 !important; }
+
+/* ⚙️ Elementos administrativos */
+.z-panel-admin   { z-index: 1700; }  /* painel flutuante de administrador */
+.z-dev-tools     { z-index: 9999; }  /* ferramentas de depuração */
+
+/* 🧪 Exemplo para depuração */
+.z-debug         { outline: 1px dashed red; z-index: 999; }
+
+/* ℹ️ Observações
+   - Use com moderação para evitar conflitos de empilhamento.
+   - Evite usar !important, exceto quando necessário.
+   - Combine com posicionamentos: position: fixed|absolute|relative
+*/

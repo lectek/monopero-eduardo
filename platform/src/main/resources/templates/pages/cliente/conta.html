@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minha conta — Rota das Praias</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex">
+  <header th:replace="~{fragments/header :: header}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8">
+    <div class="card p-4 stack gap-16" style="max-width:420px;margin-inline:auto;">
+      <h1 class="text-base font-semibold">Minha conta</h1>
+
+      <div class="stack gap-8">
+        <p><strong>Nome:</strong> <span th:text="${cliente.nome}"></span></p>
+        <p><strong>E-mail:</strong> <span th:text="${cliente.email}"></span></p>
+        <p th:if="${cliente.telefone}"><strong>Telefone:</strong> <span th:text="${cliente.telefone}"></span></p>
+      </div>
+
+      <form method="post" th:action="@{/logout}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button class="btn" type="submit">Sair</button>
+      </form>
+    </div>
+
+    <div class="mt-8" style="max-width:640px;margin-inline:auto;">
+      <h2 class="text-base font-semibold mb-4">Meus pedidos</h2>
+
+      <div class="card p-4" th:if="${pedidos.isEmpty()}">
+        <p>Você ainda não fez nenhum pedido. <a th:href="@{/produtos}">Ver produtos</a></p>
+      </div>
+
+      <div class="stack gap-16" th:unless="${pedidos.isEmpty()}">
+        <div class="card p-4" th:each="pedido : ${pedidos}">
+          <p>
+            <strong th:text="'Pedido #' + ${pedido.id}"></strong> &nbsp;
+            <span class="badge badge--neutral" th:switch="${pedido.status.name()}">
+              <span th:case="'ABERTO'">Aberto</span>
+              <span th:case="'AGUARDANDO_PAGAMENTO'">Aguardando pagamento</span>
+              <span th:case="'PAGO'">Pago</span>
+              <span th:case="'PRONTO_PARA_ENTREGA'">Pronto para entrega</span>
+              <span th:case="'PRONTO_PARA_RETIRADA'">Pronto para retirada</span>
+              <span th:case="'SAIU_PARA_ENTREGA'">Saiu para entrega</span>
+              <span th:case="'ENVIADO'">Enviado</span>
+              <span th:case="'ENTREGUE'">Entregue</span>
+              <span th:case="'CANCELADO'">Cancelado</span>
+              <span th:case="*" th:text="${pedido.status}"></span>
+            </span>
+          </p>
+          <p th:text="${#temporals.format(pedido.data, 'dd/MM/yyyy HH:mm')}"></p>
+          <ul>
+            <li th:each="item : ${pedido.itens}">
+              <span th:text="${item.quantidade + 'x ' + item.produtoNome}"></span>
+              <span th:if="${item.produtoCor != null and !item.produtoCor.isBlank()}" th:text="${' (' + item.produtoCor + ')'}"></span>
+            </li>
+          </ul>
+          <p>
+            <strong>Total:</strong>
+            <span th:text="${#numbers.formatCurrency(pedido.total)}"></span>
+          </p>
+          <p th:if="${pedido.codigoEntrega != null and pedido.status.name() != 'ENTREGUE'}">
+            Código de entrega: <strong th:text="${pedido.codigoEntrega}"></strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/footer :: footer}"></footer>
+  <script defer th:src="@{/js/cart.js}"></script>
+</body>
+</html>

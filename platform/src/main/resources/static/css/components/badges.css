@@ -1,0 +1,46 @@
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid var(--layout-border);
+  background: var(--color-neutral-3);
+  color: var(--color-dark);
+}
+
+.badge .icon,
+.badge svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  fill: currentColor;
+}
+
+.badge--success {
+  background: color-mix(in oklab, var(--color-success) 18%, transparent);
+  border-color: color-mix(in oklab, var(--color-success) 35%, transparent);
+  color: var(--color-success);
+}
+
+.badge--warning {
+  background: color-mix(in oklab, var(--color-warning) 18%, transparent);
+  border-color: color-mix(in oklab, var(--color-warning) 35%, transparent);
+  color: var(--color-warning);
+}
+
+.badge--danger {
+  background: color-mix(in oklab, var(--color-error) 18%, transparent);
+  border-color: color-mix(in oklab, var(--color-error) 35%, transparent);
+  color: var(--color-error);
+}
+
+.badge--neutral {
+  background: color-mix(in oklab, var(--color-neutral-5) 12%, transparent);
+  border-color: color-mix(in oklab, var(--color-neutral-5) 25%, transparent);
+  color: var(--color-neutral-5);
+}

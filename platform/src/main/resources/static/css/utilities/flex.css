@@ -1,0 +1,241 @@
+/* =======================================================
+   FLEX.CSS • Utilitários de Flexbox – HotelPet (LekTeC)
+   - Display / Direção / Wrap
+   - Justify / Align / Content / Items / Self
+   - Gap (usa tokens --gap-*)
+   - Grow / Shrink / Basis / Atalhos (flex-1, auto, none)
+   - Order / Inline-flex
+   - Helpers de layout (stack, cluster, center, split, cover)
+   - Responsivo: sm/md/lg/xl (480/768/1024/1280)
+======================================================= */
+
+/* ========== Display ========== */
+.flex        { display: flex; }
+.inline-flex { display: inline-flex; }
+
+/* ========== Direção ========== */
+.flex-row    { flex-direction: row; }
+.flex-row-reverse { flex-direction: row-reverse; }
+.flex-col    { flex-direction: column; }
+.flex-col-reverse { flex-direction: column-reverse; }
+
+/* ========== Wrap ========== */
+.flex-wrap         { flex-wrap: wrap; }
+.flex-wrap-reverse { flex-wrap: wrap-reverse; }
+.flex-nowrap       { flex-wrap: nowrap; }
+
+/* ========== Justify Content ========== */
+.justify-start   { justify-content: flex-start; }
+.justify-end     { justify-content: flex-end; }
+.justify-center  { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-around  { justify-content: space-around; }
+.justify-evenly  { justify-content: space-evenly; }
+
+/* ========== Align Items ========== */
+.items-start    { align-items: flex-start; }
+.items-end      { align-items: flex-end; }
+.items-center   { align-items: center; }
+.items-baseline { align-items: baseline; }
+.items-stretch  { align-items: stretch; }
+
+/* ========== Align Content (linhas múltiplas) ========== */
+.content-start   { align-content: flex-start; }
+.content-end     { align-content: flex-end; }
+.content-center  { align-content: center; }
+.content-between { align-content: space-between; }
+.content-around  { align-content: space-around; }
+.content-stretch { align-content: stretch; }
+
+/* ========== Align Self (item) ========== */
+.self-auto     { align-self: auto; }
+.self-start    { align-self: flex-start; }
+.self-end      { align-self: flex-end; }
+.self-center   { align-self: center; }
+.self-stretch  { align-self: stretch; }
+.self-baseline { align-self: baseline; }
+
+/* ========== Gap (usa tokens globais) ========== */
+.gap-0   { gap: 0; }
+.gap-4   { gap: var(--gap-4); }
+.gap-8   { gap: var(--gap-8); }
+.gap-12  { gap: var(--gap-12); }
+.gap-16  { gap: var(--gap-16); }
+.gap-24  { gap: var(--gap-24); }
+.gap-32  { gap: var(--gap-32); }
+.gap-48  { gap: var(--gap-48); }
+.gap-64  { gap: var(--gap-64); }
+
+.gap-x-4  { column-gap: var(--gap-4); }
+.gap-x-8  { column-gap: var(--gap-8); }
+.gap-x-12 { column-gap: var(--gap-12); }
+.gap-x-16 { column-gap: var(--gap-16); }
+.gap-x-24 { column-gap: var(--gap-24); }
+.gap-x-32 { column-gap: var(--gap-32); }
+.gap-x-48 { column-gap: var(--gap-48); }
+.gap-x-64 { column-gap: var(--gap-64); }
+
+.gap-y-4  { row-gap: var(--gap-4); }
+.gap-y-8  { row-gap: var(--gap-8); }
+.gap-y-12 { row-gap: var(--gap-12); }
+.gap-y-16 { row-gap: var(--gap-16); }
+.gap-y-24 { row-gap: var(--gap-24); }
+.gap-y-32 { row-gap: var(--gap-32); }
+.gap-y-48 { row-gap: var(--gap-48); }
+.gap-y-64 { row-gap: var(--gap-64); }
+
+/* ========== Flex Grow / Shrink ========== */
+.grow       { flex-grow: 1; }
+.grow-0     { flex-grow: 0; }
+.shrink     { flex-shrink: 1; }
+.shrink-0   { flex-shrink: 0; }
+
+/* ========== Flex Basis ========== */
+.basis-0    { flex-basis: 0; }
+.basis-auto { flex-basis: auto; }
+.basis-1-2  { flex-basis: 50%; }
+.basis-1-3  { flex-basis: 33.333%; }
+.basis-2-3  { flex-basis: 66.666%; }
+.basis-1-4  { flex-basis: 25%; }
+.basis-3-4  { flex-basis: 75%; }
+.basis-full { flex-basis: 100%; }
+
+/* ========== Atalhos flex ========== */
+.flex-1   { flex: 1 1 0%; }
+.flex-auto{ flex: 1 1 auto; }
+.flex-none{ flex: none; } /* 0 0 auto */
+
+/* ========== Order ========== */
+.order-first { order: -9999; }
+.order-last  { order: 9999; }
+.order-0 { order: 0; }
+.order-1 { order: 1; }
+.order-2 { order: 2; }
+.order-3 { order: 3; }
+.order-4 { order: 4; }
+.order-5 { order: 5; }
+.order-6 { order: 6; }
+.order-7 { order: 7; }
+.order-8 { order: 8; }
+.order-9 { order: 9; }
+.order-10{ order: 10; }
+.order-11{ order: 11; }
+.order-12{ order: 12; }
+
+/* =======================================================
+   Helpers de Layout (pattern-based)
+======================================================= */
+
+/* Empilhamento vertical com gap */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-16);
+}
+
+/* Cluster: linha com wrap e alinhamento central (chips, tags) */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-8);
+}
+
+/* Centro total dentro do container */
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Split: dois lados com espaço entre (títulos/ações) */
+.split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-16);
+}
+
+/* Cover: cabeçalho/conteúdo/rodapé com centro “elástico” */
+.cover {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+.cover > * { margin-block: var(--gap-16); }
+.cover > :first-child { margin-block-start: 0; }
+.cover > :last-child  { margin-block-end: 0; }
+.cover__center { margin-block: auto; }
+
+/* Auto Grid usando flex (cartões iguais em uma linha) */
+.auto-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-16);
+}
+.auto-rows > * {
+  flex: 1 1 clamp(220px, 25%, 320px);
+}
+
+/* =======================================================
+   Variantes Responsivas
+   sm: ≥480px • md: ≥768px • lg: ≥1024px • xl: ≥1280px
+   (usa escape da barra invertida para “:”)
+======================================================= */
+@media (min-width: 480px){
+  .sm\:flex { display:flex; }
+  .sm\:inline-flex { display:inline-flex; }
+  .sm\:flex-row { flex-direction: row; }
+  .sm\:flex-col { flex-direction: column; }
+  .sm\:justify-between { justify-content: space-between; }
+  .sm\:items-center { align-items: center; }
+  .sm\:gap-16 { gap: var(--gap-16); }
+  .sm\:gap-24 { gap: var(--gap-24); }
+  .sm\:flex-wrap { flex-wrap: wrap; }
+  .sm\:flex-nowrap { flex-wrap: nowrap; }
+  .sm\:basis-1-2 { flex-basis: 50%; }
+  .sm\:basis-1-3 { flex-basis: 33.333%; }
+  .sm\:basis-2-3 { flex-basis: 66.666%; }
+}
+
+@media (min-width: 768px){
+  .md\:flex { display:flex; }
+  .md\:inline-flex { display:inline-flex; }
+  .md\:flex-row { flex-direction: row; }
+  .md\:flex-col { flex-direction: column; }
+  .md\:justify-between { justify-content: space-between; }
+  .md\:items-center { align-items: center; }
+  .md\:gap-24 { gap: var(--gap-24); }
+  .md\:gap-32 { gap: var(--gap-32); }
+  .md\:basis-1-2 { flex-basis: 50%; }
+  .md\:basis-1-3 { flex-basis: 33.333%; }
+  .md\:basis-2-3 { flex-basis: 66.666%; }
+}
+
+@media (min-width: 1024px){
+  .lg\:flex { display:flex; }
+  .lg\:inline-flex { display:inline-flex; }
+  .lg\:flex-row { flex-direction: row; }
+  .lg\:flex-col { flex-direction: column; }
+  .lg\:justify-between { justify-content: space-between; }
+  .lg\:items-center { align-items: center; }
+  .lg\:gap-32 { gap: var(--gap-32); }
+  .lg\:gap-64 { gap: var(--gap-64); }
+  .lg\:basis-1-2 { flex-basis: 50%; }
+  .lg\:basis-1-3 { flex-basis: 33.333%; }
+  .lg\:basis-2-3 { flex-basis: 66.666%; }
+}
+
+@media (min-width: 1280px){
+  .xl\:flex { display:flex; }
+  .xl\:inline-flex { display:inline-flex; }
+  .xl\:justify-between { justify-content: space-between; }
+  .xl\:items-center { align-items: center; }
+  .xl\:gap-64 { gap: var(--gap-64); }
+}
+
+/* =======================================================
+   Boas práticas de performance (opcionais)
+======================================================= */
+.will-change-transform { will-change: transform; }
+.will-change-opacity   { will-change: opacity; }

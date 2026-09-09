@@ -1,0 +1,350 @@
+/* ===============================
+📦 Layout Profissional do Painel – HotelPet (LekTeC)
+• Tokens + Dark mode
+• Header sticky com offset real
+• Menu mobile off-canvas + backdrop
+• Cards, grid e motion-safe
+• Botões consistentes + foco acessível
+=============================== */
+
+body.admin-page {
+  --layout-bg: #f9fafb;
+  --layout-card: #ffffff;
+  --layout-dark: #1f2937;
+  --admin-header-bg: #0f172a;
+  --layout-accent: #000000;
+  --layout-accent-hover: #333333;
+  --layout-border: #e5e7eb;
+  --layout-radius: 12px;
+  --layout-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+
+  /* helpers */
+  --layout-gutter: clamp(16px, 2vw, 24px);
+  --header-h: 64px;
+  --site-header-height: var(--header-h);
+  --page-pad: var(--layout-gutter);
+  --container-w: 1280px;
+  --safe-pad: var(--layout-gutter);
+  --elev-1: 0 2px 6px rgba(0,0,0,.08);
+  --elev-2: 0 10px 30px rgba(0,0,0,.08);
+  --elev-3: 0 16px 40px rgba(0,0,0,.10);
+
+  /* layers */
+  --z-header: 1100;
+  --z-backdrop: 1190;
+  --z-nav: 1200;
+  --z-fab: 900;
+}
+
+:root[data-theme="dark"] body.admin-page {
+    --layout-bg: #0f172a;
+    --layout-card: #0b1220;
+    --layout-dark: #e5e7eb;
+    --admin-header-bg: #020617;
+    --layout-border: #1e293b;
+    --layout-shadow: 0 10px 30px rgba(0,0,0,.35);
+    --layout-accent: #38bdf8;
+    --layout-accent-hover: #0ea5e9;
+}
+
+/* base */
+html, body { 
+  width: 100%; 
+  overflow-x: hidden;
+  /* height: 100% removed to allow scrolling on overflow */
+}
+
+body {
+  margin: 0;
+}
+
+body.admin-page {
+  font-family: var(--font-sans);
+  background-color: var(--layout-bg);
+  color: var(--layout-dark);
+  margin: 0;
+  line-height: 1.6;
+}
+
+:root[data-theme="dark"] body.admin-page { color: #e5e7eb; }
+
+.no-scroll { overflow: hidden; }
+
+/* container seguro */
+.container-fluid {
+  max-width: var(--container-w);
+  margin-inline: auto;
+  padding-inline: var(--page-pad);
+}
+
+/* HEADER */
+.admin-page .site-header, .admin-page .navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-inline: var(--safe-pad);
+  background-color: var(--admin-header-bg);
+  color: #fff;
+  box-shadow: var(--elev-1);
+  backdrop-filter: saturate(120%) blur(6px);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  transition: background-color .2s ease, box-shadow .2s ease;
+}
+
+.admin-page .site-header.scrolled, .admin-page .navbar.scrolled {
+  box-shadow: var(--elev-2);
+  background-color: color-mix(in oklab, var(--admin-header-bg), #000 15%);
+}
+
+.admin-page .header-inner {
+  width: 100%;
+  max-width: var(--container-w);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.admin-page .logo { height: 48px; display: inline-flex; align-items: center; }
+.admin-page .logo img { max-height: 40px; }
+.site-header .logo { height: 48px; display: inline-flex; align-items: center; }
+.site-header .logo .admin-logo-image { max-height: 40px; width: auto; display: block; }
+
+/* reserva abaixo da navbar */
+.main-offset { block-size: var(--header-height, var(--header-h)); }
+
+body:not(.admin-page) .main-offset {
+  display: none;
+  block-size: 0;
+}
+
+/* língua */
+.admin-page .language-selector {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.admin-page .language-selector a {
+  font-weight: 600;
+  font-size: .875rem;
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  text-decoration: none;
+  background: transparent;
+  color: #111827;
+}
+
+.language-selector a:hover {
+  background-color: var(--layout-border);
+}
+
+:root[data-theme="dark"] .admin-page .language-selector a { color: #e5e7eb; }
+
+/* nav desktop */
+.admin-page .painel-nav { 
+  display: flex;
+  gap: .75rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+/* botões */
+.admin-page .menu-button,
+.admin-page .nav-toggle,
+.admin-page .sidebar-toggle,
+.admin-page .btn-acessar,
+.admin-page .btn-form {
+  background-color: var(--layout-accent);
+  color: #fff;
+  font-weight: 700;
+  padding: .6rem 1.3rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color .2s ease, transform .2s ease;
+}
+.admin-page .menu-button:hover,
+.admin-page .nav-toggle:hover,
+.admin-page .sidebar-toggle:hover,
+.admin-page .btn-acessar:hover,
+.admin-page .btn-form:hover {
+  background-color: var(--layout-accent-hover);
+  transform: translateY(-1px);
+}
+
+/* Mantem os dois toggles alinhados a direita no mobile */
+.admin-page .sidebar-toggle {
+  margin-left: auto;
+}
+
+.admin-page .nav-toggle,
+.admin-page .sidebar-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* hambúrguer */
+.admin-page .menu-button .menu-icon,
+.admin-page .nav-toggle .menu-icon,
+.admin-page .sidebar-toggle .menu-icon {
+  position: relative;
+  width: 22px; height: 2px;
+  background: #fff;
+}
+.admin-page .menu-button .menu-icon::before,
+.admin-page .menu-button .menu-icon::after,
+.admin-page .nav-toggle .menu-icon::before,
+.admin-page .nav-toggle .menu-icon::after,
+.admin-page .sidebar-toggle .menu-icon::before,
+.admin-page .sidebar-toggle .menu-icon::after {
+  content: "";
+  position: absolute;
+  width: 22px; height: 2px;
+  background: #fff;
+}
+.admin-page .menu-button .menu-icon::before { top: -7px; }
+.admin-page .menu-button .menu-icon::after  { top: 7px; }
+
+html.nav-open .admin-page .nav-toggle .menu-icon { background: transparent; }
+html.nav-open .admin-page .nav-toggle .menu-icon::before { transform: rotate(45deg) translate(3px,3px); }
+html.nav-open .admin-page .nav-toggle .menu-icon::after  { transform: rotate(-45deg) translate(3px,-3px); }
+
+/* NAV MOBILE */
+.admin-page .primary-nav {
+  position: fixed;
+  inset: var(--header-h) 0 0 0;
+  background: var(--layout-card);
+  z-index: var(--z-nav);
+  padding: 16px var(--safe-pad);
+  overflow-y: auto;
+
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: .18s ease;
+}
+
+html.nav-open body.admin-page .primary-nav {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (min-width: 1024px) {
+  .admin-page .site-header {
+    padding-inline: 0;
+  }
+
+  .admin-page .header-inner {
+    min-height: var(--header-h);
+    padding-inline: var(--page-pad);
+  }
+
+  .admin-page .layout--with-sidebar {
+    width: min(100%, calc(var(--container-w) + (var(--page-pad) * 2)));
+    margin-inline: auto;
+    padding-inline: var(--page-pad);
+  }
+
+  .admin-page .layout--with-sidebar .sidebar {
+    top: calc(var(--header-h) + 12px);
+    max-height: calc(100dvh - (var(--header-h) + 24px));
+  }
+}
+
+
+/* MAIN */
+main {
+  padding-block: clamp(1.5rem, 3vw, 2.5rem);
+}
+main .container,
+main.container {
+  max-width: var(--container-w);
+  margin-inline: auto;
+  padding-inline: var(--safe-pad);
+}
+
+/* CARDS */
+.admin-page .painel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.admin-page .card {
+  background-color: var(--layout-card);
+  border: 1px solid var(--layout-border);
+  border-radius: var(--layout-radius);
+  padding: clamp(16px, 2vw, 28px);
+  box-shadow: var(--layout-shadow);
+  transition: .2s ease;
+}
+
+.admin-page .card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--elev-3);
+}
+
+/* ================
+   ⚠ FIX DO FOOTER
+   (ESSENCIAL)
+=================== */
+
+.body-flex {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body:not(.admin-page).body-flex > main,
+body:not(.admin-page).body-flex > .layout {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+body:not(.admin-page).body-flex > .layout--with-sidebar {
+  width: 100%;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+/* Admin pages should let the footer sit right after the content instead of
+   stretching the shell and creating a phantom canvas above the footer. */
+body.admin-page.body-flex > .layout,
+body.admin-page.body-flex > .layout--with-sidebar {
+  width: 100%;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.body-flex > .site-footer {
+  flex-shrink: 0;
+}
+
+.site-footer {
+  display: block !important;
+}
+
+@media (max-width: 1023.98px) {
+  body:not(.admin-page) main {
+    padding-block-start: clamp(0.55rem, 2.4vw, 0.9rem);
+    padding-block-end: clamp(1rem, 4vw, 1.6rem);
+  }
+
+  body:not(.admin-page) .layout--with-sidebar {
+    padding-top: clamp(0.35rem, 1.8vw, 0.75rem);
+  }
+}

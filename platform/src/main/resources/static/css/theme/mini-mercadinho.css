@@ -1,0 +1,56 @@
+/* Identidade visual — Rota das Praias
+   Preto + dourado (mesma paleta da logo). O grosso da cor (produtos,
+   cards, hero) já foi ajustado direto nas variáveis --store-* dentro de
+   pages/store-home.css — aqui só o que não é coberto por elas: header,
+   footer, botões genéricos (.btn) e o logo em fundo escuro. */
+
+:root {
+  /* Header sempre escuro (não depende de toggle de tema — não temos um) */
+  --header-bg: #0b0b0b;
+  --header-border: #2a2a2a;
+  --header-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  --header-link-color: #FFF7D6;
+  --header-link-hover: #F6C500;
+  --header-link-hover-bg: rgba(246, 197, 0, .12);
+  --header-cta-bg: #F6C500;
+  --header-cta-bg-hover: #D9AC00;
+}
+
+/* Logo do header com folga própria (fundo escuro) */
+.site-header .brand-logo {
+  max-height: 52px;
+  width: auto;
+}
+
+/* header.css não limita a largura do conteúdo interno (só do .store-home) —
+   em telas bem largas isso deixava logo e menu "grudados" nas pontas, com
+   um vão enorme de preto vazio no meio. Mesmo teto de largura do conteúdo. */
+.site-header .header-inner {
+  max-width: var(--container-max);
+  margin-inline: auto;
+}
+
+/* CTA genérico (botões .btn usados em carrinho/checkout) */
+.btn,
+.btn--primary {
+  background: var(--color-primary);
+  color: #171717;
+  border-color: transparent;
+  font-weight: 700;
+}
+.btn:hover,
+.btn--primary:hover {
+  background: var(--color-primary-hover);
+  color: #171717;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--color-dark);
+  border: 1px solid var(--color-neutral-4);
+}
+
+/* Preço em destaque nos cards de produto */
+.product-card strong,
+.store-feature__buy strong {
+  color: #171717;
+}

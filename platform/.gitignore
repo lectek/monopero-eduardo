@@ -1,0 +1,23 @@
+# Build
+target/
+*.class
+
+# SQLite runtime files (nunca versionar o WAL/SHM, só o .db base)
+dev-data/*.db-shm
+dev-data/*.db-wal
+dev-data/*.db-journal
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Segredos reais (JWT_SECRET, MP_ACCESS_TOKEN, ADMIN_PASSWORD, OAUTH_GOOGLE_*) —
+# usar .env.example como referência, nunca commitar o .env de verdade.
+.env

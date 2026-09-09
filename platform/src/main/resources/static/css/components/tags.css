@@ -1,0 +1,13 @@
+/* Tags */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-neutral-2);
+  color: var(--color-neutral-5);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--layout-border);
+}

@@ -1,0 +1,51 @@
+/* ===========================================
+   UTILITÁRIO: TEXT
+   Autor: LekTeC / Alex Morais
+   Descrição: Utilidades para controle de alinhamento e formatação de texto
+   =========================================== */
+
+/* 📍 Alinhamento de Texto */
+.text-left       { text-align: left; }
+.text-right      { text-align: right; }
+.text-center     { text-align: center; }
+.text-justify    { text-align: justify; }
+
+/* 🧭 Direção e Escrita */
+.text-ltr        { direction: ltr; }         /* da esquerda para a direita */
+.text-rtl        { direction: rtl; }         /* da direita para a esquerda */
+
+/* 🔠 Capitalização */
+.text-uppercase  { text-transform: uppercase; }   /* TUDO EM MAIÚSCULO */
+.text-lowercase  { text-transform: lowercase; }   /* tudo em minúsculo */
+.text-capitalize { text-transform: capitalize; }  /* Primeira Letra Maiúscula */
+
+/* 🧩 Quebra e Espaçamento */
+.text-nowrap     { white-space: nowrap; }     /* Evita quebra de linha */
+.text-wrap       { white-space: normal; }     /* Permite quebra de linha */
+.text-break      { word-break: break-word; }  /* Quebra forçada de palavras longas */
+
+/* 📏 Tamanhos de Fonte */
+.text-xs         { font-size: 0.75rem; }  /* 12px */
+.text-sm         { font-size: 0.875rem; } /* 14px */
+.text-base       { font-size: 1rem; }     /* 16px */
+.text-lg         { font-size: 1.125rem; } /* 18px */
+.text-xl         { font-size: 1.25rem; }  /* 20px */
+.text-2xl        { font-size: 1.5rem; }   /* 24px */
+
+/* 💬 Estilo de Fonte */
+.text-bold       { font-weight: 700; }
+.text-semibold   { font-weight: 600; }
+.text-medium     { font-weight: 500; }
+.text-normal     { font-weight: 400; }
+.text-light      { font-weight: 300; }
+.text-thin       { font-weight: 200; }
+
+/* 🎯 Outras utilidades */
+.text-muted      { color: #6c757d; }     /* cinza para textos secundários */
+.text-highlight  { background: yellow; } /* marca texto */
+
+/* ℹ️ Observações:
+   - Combine com classes de cor e espaçamento.
+   - Ideal para títulos, descrições e textos adaptáveis.
+   - Pode ser usado junto com tokens e design system.
+*/

@@ -1,0 +1,41 @@
+/* Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--chip-border, transparent);
+  background: var(--chip-bg, var(--layout-dark));
+  color: var(--chip-color, #fff);
+  transition: transform var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+  background: var(--chip-hover-bg, var(--color-primary));
+  color: var(--chip-hover-color, #fff);
+}
+
+.chip--muted {
+  --chip-bg: var(--color-neutral-2);
+  --chip-color: var(--layout-dark);
+  --chip-border: var(--layout-border);
+  --chip-hover-bg: var(--color-neutral-3);
+  --chip-hover-color: var(--layout-dark);
+}
+
+.chip--outline {
+  --chip-bg: transparent;
+  --chip-color: var(--layout-dark);
+  --chip-border: var(--layout-border);
+}
+
+.chip--primary {
+  --chip-bg: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  --chip-color: var(--color-primary);
+  --chip-border: color-mix(in oklab, var(--color-primary) 45%, transparent);
+}

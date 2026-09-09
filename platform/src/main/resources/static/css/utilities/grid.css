@@ -1,0 +1,158 @@
+/* =======================================================
+   GRID.CSS • Utilitários de CSS Grid – HotelPet (LekTeC)
+   - Display / Template / Colunas / Linhas
+   - Gap / Justify / Align
+   - Auto-fit / Auto-fill
+   - Helpers (stack, dashboard, masonry, responsive cards)
+   - Breakpoints responsivos (sm/md/lg/xl)
+======================================================= */
+
+/* ========== Display ========== */
+.grid        { display: grid; }
+.inline-grid { display: inline-grid; }
+
+/* ========== Template de Colunas ========== */
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
+.grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+.grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+
+/* Template de Linhas */
+.grid-rows-1 { grid-template-rows: repeat(1, auto); }
+.grid-rows-2 { grid-template-rows: repeat(2, auto); }
+.grid-rows-3 { grid-template-rows: repeat(3, auto); }
+.grid-rows-4 { grid-template-rows: repeat(4, auto); }
+.grid-rows-6 { grid-template-rows: repeat(6, auto); }
+
+/* ========== Gap ========== */
+.gap-0   { gap: 0; }
+.gap-4   { gap: var(--gap-4); }
+.gap-8   { gap: var(--gap-8); }
+.gap-12  { gap: var(--gap-12); }
+.gap-16  { gap: var(--gap-16); }
+.gap-24  { gap: var(--gap-24); }
+.gap-32  { gap: var(--gap-32); }
+.gap-48  { gap: var(--gap-48); }
+.gap-64  { gap: var(--gap-64); }
+
+.gap-x-8  { column-gap: var(--gap-8); }
+.gap-x-48 { column-gap: var(--gap-48); }
+.gap-y-8  { row-gap: var(--gap-8); }
+.gap-y-48 { row-gap: var(--gap-48); }
+
+/* ========== Justify & Align ========== */
+.justify-start   { justify-items: start; }
+.justify-end     { justify-items: end; }
+.justify-center  { justify-items: center; }
+.justify-stretch { justify-items: stretch; }
+
+.items-start     { align-items: start; }
+.items-end       { align-items: end; }
+.items-center    { align-items: center; }
+.items-stretch   { align-items: stretch; }
+
+.justify-self-start   { justify-self: start; }
+.justify-self-end     { justify-self: end; }
+.justify-self-center  { justify-self: center; }
+.justify-self-stretch { justify-self: stretch; }
+
+.align-self-start   { align-self: start; }
+.align-self-end     { align-self: end; }
+.align-self-center  { align-self: center; }
+.align-self-stretch { align-self: stretch; }
+
+/* ========== Auto-fit / Auto-fill ========== */
+.grid-auto-fit-sm {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.grid-auto-fit-md {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.grid-auto-fit-lg {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.grid-auto-fill {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+/* ========== Helpers de Layout ========== */
+
+/* Stack em Grid */
+.grid-stack {
+  display: grid;
+  gap: var(--gap-16);
+}
+
+/* Dashboard padrão (sidebar + conteúdo) */
+.grid-dashboard {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+@media (max-width: 768px) {
+  .grid-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Masonry fake (cards com alturas diferentes) */
+.grid-masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: var(--gap-16);
+}
+
+/* Cards responsivos */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--gap-24);
+}
+
+/* Split (duas áreas) */
+.grid-split-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-24);
+}
+@media (max-width: 768px) {
+  .grid-split-2 { grid-template-columns: 1fr; }
+}
+
+/* Cover layout: cabeçalho, conteúdo elástico, rodapé */
+.grid-cover {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+/* ========== Responsividade (sm/md/lg/xl) ========== */
+@media (min-width: 480px) {
+  .sm\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .sm\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .sm\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .md\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .md\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .lg\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .lg\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+  .lg\:grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+}
+
+@media (min-width: 1280px) {
+  .xl\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .xl\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+  .xl\:grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+}

@@ -1,0 +1,222 @@
+/* Final mobile corrections loaded after page-level styles. */
+
+@media (max-width: 1023.98px) {
+  body:not(.admin-page) .site-header .header-inner {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.admin-page) .header-actions {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    max-width: min(42vw, 144px) !important;
+    min-width: 0 !important;
+    gap: 0.24rem !important;
+    overflow: hidden !important;
+  }
+
+  body:not(.admin-page) .theme-toggle {
+    flex: 0 0 38px !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 96px !important;
+    height: 38px !important;
+    padding: 0 0.34rem !important;
+    gap: 0.28rem !important;
+    overflow: hidden !important;
+    border-radius: 11px !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account__greeting {
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    color: currentColor !important;
+    font-size: 0.86rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account__avatar {
+    width: 26px !important;
+    height: 26px !important;
+    flex: 0 0 26px !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--authenticated {
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--authenticated .header-account__greeting {
+    display: none !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--guest {
+    flex: 0 0 auto !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    padding-inline: 0.42rem !important;
+    justify-content: center !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--guest .header-account__avatar {
+    display: none !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--guest .header-account__greeting {
+    display: block !important;
+    max-width: 100% !important;
+    font-size: 0.78rem !important;
+    text-align: center !important;
+  }
+
+  body:not(.admin-page) .layout--with-sidebar {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+    padding-top: clamp(8px, 2.5vw, 14px) !important;
+  }
+
+  body:not(.admin-page) .layout--with-sidebar > main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+
+  body:not(.admin-page) .layout--with-sidebar > .sidebar.sidebar {
+    position: fixed !important;
+    top: var(--header-height, 84px) !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 1240 !important;
+    display: block !important;
+    width: min(84vw, 320px) !important;
+    max-width: 320px !important;
+    min-width: 0 !important;
+    height: calc(100dvh - var(--header-height, 84px)) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    border-radius: 0 18px 18px 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: translate3d(-112%, 0, 0) !important;
+    pointer-events: none !important;
+    overscroll-behavior: contain !important;
+  }
+
+  body:not(.admin-page) .layout--with-sidebar > .sidebar.sidebar.is-open {
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto !important;
+  }
+
+  body:not(.admin-page) .sidebar-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1230 !important;
+    width: auto !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(58, 39, 48, 0.42) !important;
+  }
+
+  html.sidebar-open body:not(.admin-page) .site-header {
+    z-index: 1250 !important;
+  }
+
+  html.sidebar-open body:not(.admin-page) .site-header .sidebar-toggle {
+    position: relative !important;
+    z-index: 1260 !important;
+  }
+
+  body.cliente-conta-page .cliente-account-shell,
+  body.cliente-pet-form-page .cliente-account-shell {
+    display: block !important;
+    min-height: 0 !important;
+    padding-top: clamp(8px, 2.5vw, 14px) !important;
+  }
+
+  body.cliente-conta-page .pet-profile-dashboard,
+  body.cliente-conta-page .cliente-dashboard--home,
+  body.cliente-pet-form-page .pet-profile-dashboard {
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  body.cliente-conta-page .pet-profile-layout {
+    margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  body:not(.admin-page) .header-actions {
+    max-width: min(43vw, 126px) !important;
+    gap: 0.18rem !important;
+  }
+
+  body:not(.admin-page) .theme-toggle {
+    flex-basis: 36px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account {
+    height: 36px !important;
+    max-width: 88px !important;
+    padding-inline: 0.28rem !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--authenticated {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account--guest {
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    padding-inline: 0.32rem !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account__greeting {
+    font-size: 0.78rem !important;
+  }
+
+  body:not(.admin-page) .site-header .header-account__avatar {
+    width: 24px !important;
+    height: 24px !important;
+    flex-basis: 24px !important;
+  }
+
+  body:not(.admin-page) .layout--with-sidebar > .sidebar.sidebar {
+    width: min(88vw, 318px) !important;
+  }
+
+  body.cliente-conta-page .pet-profile-dashboard,
+  body.cliente-pet-form-page .pet-profile-dashboard {
+    padding-inline: clamp(12px, 4vw, 16px) !important;
+  }
+}

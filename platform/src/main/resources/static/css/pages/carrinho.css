@@ -1,0 +1,78 @@
+/* Carrinho — escrito do zero (o carrinho.css do ParaisoPet era pra um
+ * carrinho renderizado no servidor via sessão; aqui o carrinho é montado
+ * no navegador via localStorage, então as classes/estrutura são outras). */
+
+.cart-page__main {
+  padding-block: clamp(16px, 3vw, 32px);
+}
+
+.cart-page__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--gap-12);
+  margin-bottom: var(--gap-16);
+}
+.cart-page__eyebrow {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary-hover);
+}
+.cart-page__head h1 { margin: 2px 0 0; }
+.cart-page__continue {
+  font-weight: 700;
+  color: var(--layout-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.carrinho { align-items: start; }
+
+.item-carrinho {
+  display: flex;
+  gap: var(--gap-16);
+  align-items: center;
+  padding: var(--gap-16);
+}
+.item-carrinho__img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-2);
+  flex: none;
+}
+.item-carrinho__info { flex: 1; display: grid; gap: 4px; }
+.item-carrinho__nome { font-weight: 700; }
+.item-carrinho__preco { color: var(--color-primary-hover); font-weight: 800; }
+.item-carrinho__qtd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.item-carrinho__qtd input {
+  width: 3.5rem;
+  text-align: center;
+}
+
+.carrinho-vazio {
+  text-align: center;
+  padding: var(--gap-48) var(--gap-16);
+  color: var(--color-neutral-5);
+}
+
+.resumo-pedido { position: sticky; top: calc(var(--header-height, 96px) + 16px); }
+.resumo-linha.total {
+  font-size: 1.15rem;
+  border-top: 1px solid var(--layout-border);
+  padding-top: var(--gap-12);
+}
+.cart-checkout-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}

@@ -1,0 +1,10 @@
+<!-- Nav do motoboy — simples, pensado pra celular (sem menu desktop). -->
+<header class="site-header admin-page" role="banner" th:fragment="nav">
+  <div class="header-inner container-fluid" style="justify-content:space-between;">
+    <a th:href="@{/motoboy}" class="logo-link header-brand" aria-label="Minhas rotas">
+      <img class="brand-logo brand-logo--small" th:src="@{/images/logo-rota-das-praias.png}" alt="Rota das Praias" />
+    </a>
+    <span class="text-base font-semibold">Motoboy</span>
+    <button id="admin-logout" class="btn" type="button">Sair</button>
+  </div>
+</header>

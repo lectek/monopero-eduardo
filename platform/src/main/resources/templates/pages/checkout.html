@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finalizar pedido — Rota das Praias</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex checkout-page">
+  <header th:replace="~{fragments/header :: header}"></header>
+
+  <main id="main-content" class="container mt-4 mb-8">
+    <h1>Finalizar pedido</h1>
+
+    <div id="checkout-vazio" class="card p-4" hidden>
+      <p>Seu carrinho está vazio.</p>
+      <a class="btn mt-2" href="/produtos">Ver produtos</a>
+    </div>
+
+    <div id="checkout-conteudo" class="checkout-grid">
+      <form id="form-checkout" class="card p-4 stack gap-16">
+        <h2 class="text-base font-semibold">Seus dados</h2>
+        <div class="form-row gap-2">
+          <input class="input" name="customerNome" placeholder="Nome completo" required />
+        </div>
+        <div class="form-row gap-2">
+          <input class="input" type="email" name="customerEmail" placeholder="E-mail" required />
+        </div>
+        <div class="form-row gap-2">
+          <input class="input" name="customerTelefone" placeholder="Telefone / WhatsApp" />
+        </div>
+
+        <h2 class="text-base font-semibold">Entrega</h2>
+        <div class="form-row gap-2">
+          <label class="inline-flex gap-1"><input type="radio" name="modoEntrega" value="RETIRADA" checked /> Retirar na loja</label>
+          <label class="inline-flex gap-1"><input type="radio" name="modoEntrega" value="ENTREGA" /> Entrega</label>
+        </div>
+        <div class="form-row gap-2" id="campo-endereco" hidden>
+          <input class="input" name="enderecoEntrega" placeholder="Endereço completo (rua, número, bairro, cidade)" />
+        </div>
+
+        <h2 class="text-base font-semibold">Pagamento</h2>
+        <div class="stack gap-8">
+          <label class="inline-flex gap-1"><input type="radio" name="tipoPagamento" value="PIX" checked /> Pix</label>
+          <label class="inline-flex gap-1"><input type="radio" name="tipoPagamento" value="DINHEIRO" /> Dinheiro (na entrega/retirada)</label>
+        </div>
+
+        <div class="alert alert-error" id="checkout-erro" hidden></div>
+        <button class="btn btn--primary" type="submit" id="btn-confirmar">Confirmar pedido</button>
+      </form>
+
+      <aside class="card p-4 stack gap-16">
+        <h2 class="text-base font-semibold">Resumo</h2>
+        <div id="checkout-itens" class="stack gap-8"></div>
+        <div class="resumo-linha total flex justify-between font-bold">
+          <span>Total:</span>
+          <span id="checkout-total">R$ 0,00</span>
+        </div>
+      </aside>
+    </div>
+
+    <div id="checkout-resultado" class="card p-4" hidden>
+      <h2>Pedido recebido!</h2>
+      <p id="resultado-mensagem"></p>
+      <div id="resultado-pix" hidden>
+        <p>Escaneie o QR code ou copie o código Pix abaixo:</p>
+        <img id="resultado-pix-qrcode" alt="QR code Pix" style="max-width:220px;" />
+        <textarea id="resultado-pix-copia-cola" readonly rows="3" class="input" style="width:100%;"></textarea>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/footer :: footer}"></footer>
+  <script defer th:src="@{/js/cart.js}"></script>
+  <script defer th:src="@{/js/pages/checkout.js}"></script>
+</body>
+</html>

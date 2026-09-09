@@ -1,0 +1,114 @@
+/* ===========================================
+   UTILITÁRIOS DE ANIMAÇÃO • HotelPet
+   - Tokens de movimento
+   - Variantes in/out
+   - A11y: reduz movimento
+=========================================== */
+
+/* 🎛️ Tokens de movimento (customize no :root global se quiser) */
+:root{
+  --motion-ease-out: cubic-bezier(.2,.8,.2,1);
+  --motion-ease-in:  cubic-bezier(.4,0,1,1);
+  --motion-ease:     cubic-bezier(.25,.1,.25,1);
+  --motion-fast:     150ms;
+  --motion-base:     300ms;
+  --motion-slow:     500ms;
+}
+
+/* 🔧 Utilitários */
+.animate             { animation-fill-mode: both; }
+.animate-fast        { animation-duration: var(--motion-fast); }
+.animate-base        { animation-duration: var(--motion-base); }
+.animate-slow        { animation-duration: var(--motion-slow); }
+.animate-ease        { animation-timing-function: var(--motion-ease); }
+.animate-ease-out    { animation-timing-function: var(--motion-ease-out); }
+.animate-ease-in     { animation-timing-function: var(--motion-ease-in); }
+.animate-infinite    { animation-iteration-count: infinite; }
+.animate-once        { animation-iteration-count: 1; }
+.will-change-opacity { will-change: opacity; }
+.will-change-transform{ will-change: transform; }
+
+/* 💫 Tipos (mantidos + variantes) */
+.animate-fade-in     { animation: fadeIn .5s var(--motion-ease-out) both; }
+.animate-fade-out    { animation: fadeOut .5s var(--motion-ease-in)  both; }
+
+.animate-slide-up    { animation: slideUp .5s var(--motion-ease-out) both; }
+.animate-slide-down  { animation: slideDown .5s var(--motion-ease-out) both; }
+.animate-slide-left  { animation: slideLeft .5s var(--motion-ease-out) both; }
+.animate-slide-right { animation: slideRight .5s var(--motion-ease-out) both; }
+
+.animate-zoom-in     { animation: zoomIn .4s var(--motion-ease-out) both; }
+.animate-zoom-out    { animation: zoomOut .4s var(--motion-ease-in)  both; }
+
+.animate-bounce      { animation: bounce 1s var(--motion-ease) infinite; }
+.animate-spin        { animation: spin 1s linear infinite; }
+
+/* ⏱️ Delay/Duração (presets) */
+.delay-100 { animation-delay: .1s; }
+.delay-200 { animation-delay: .2s; }
+.delay-300 { animation-delay: .3s; }
+.delay-400 { animation-delay: .4s; }
+.delay-500 { animation-delay: .5s; }
+
+.duration-100  { animation-duration: .1s; }
+.duration-200  { animation-duration: .2s; }
+.duration-500  { animation-duration: .5s; }
+.duration-1000 { animation-duration: 1s; }
+
+/* ===============================
+   💡 Keyframes (performáticos)
+   Usam apenas opacity/transform
+================================ */
+@keyframes fadeIn{
+  from{ opacity:0; }
+  to  { opacity:1; }
+}
+@keyframes fadeOut{
+  from{ opacity:1; }
+  to  { opacity:0; }
+}
+
+@keyframes slideUp{
+  from{ transform: translateY(20px); opacity:0; }
+  to  { transform: translateY(0);    opacity:1; }
+}
+@keyframes slideDown{
+  from{ transform: translateY(-20px); opacity:0; }
+  to  { transform: translateY(0);      opacity:1; }
+}
+@keyframes slideLeft{
+  from{ transform: translateX(20px); opacity:0; }
+  to  { transform: translateX(0);    opacity:1; }
+}
+@keyframes slideRight{
+  from{ transform: translateX(-20px); opacity:0; }
+  to  { transform: translateX(0);      opacity:1; }
+}
+
+@keyframes zoomIn{
+  from{ transform: scale(.96); opacity:0; }
+  to  { transform: scale(1);   opacity:1; }
+}
+@keyframes zoomOut{
+  from{ transform: scale(1);   opacity:1; }
+  to  { transform: scale(.96); opacity:0; }
+}
+
+@keyframes bounce{
+  0%,100%{ transform: translateY(0); }
+  50%    { transform: translateY(-10px); }
+}
+@keyframes spin{
+  from{ transform: rotate(0deg); }
+  to  { transform: rotate(360deg); }
+}
+
+/* 🧘 Preferência do usuário: reduz movimento */
+@media (prefers-reduced-motion: reduce){
+  .animate,
+  [class*="animate-"]{
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

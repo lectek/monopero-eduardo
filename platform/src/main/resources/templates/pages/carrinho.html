@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carrinho — Rota das Praias</title>
+  <link rel="icon" type="image/png" th:href="@{/images/logo-rota-das-praias.png}" />
+  <link rel="stylesheet" th:href="@{/css/main.css(v=${#dates.createNow().time})}" />
+</head>
+<body class="body-flex cart-page">
+  <header th:replace="~{fragments/header :: header}"></header>
+
+  <main id="main-content" class="container mt-2 mb-2 cart-page__main">
+    <header class="cart-page__head">
+      <div>
+        <span class="cart-page__eyebrow">Rota das Praias</span>
+        <h1>Meu carrinho</h1>
+      </div>
+      <a class="cart-page__continue" th:href="@{/produtos}">Continuar comprando</a>
+    </header>
+
+    <div class="carrinho grid grid-cols-1 md:grid-cols-2 gap-32 mt-4">
+      <div class="lista-produtos stack gap-16" id="lista-itens">
+        <!-- JS popula -->
+      </div>
+
+      <aside class="resumo-pedido card stack gap-16 p-4">
+        <h2 class="text-base font-semibold">Resumo do pedido</h2>
+        <div class="resumo-linha flex justify-between">
+          <span>Subtotal:</span>
+          <span id="resumo-subtotal">R$ 0,00</span>
+        </div>
+        <div class="resumo-linha total flex justify-between font-bold">
+          <span>Total:</span>
+          <span id="resumo-total">R$ 0,00</span>
+        </div>
+        <p class="text-sm text-muted">O frete é calculado no próximo passo, com base no endereço de entrega.</p>
+        <a href="/checkout" id="btn-checkout" class="btn btn--primary cart-checkout-btn">Finalizar pedido</a>
+      </aside>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/footer :: footer}"></footer>
+  <script defer th:src="@{/js/cart.js}"></script>
+  <script defer th:src="@{/js/pages/carrinho.js}"></script>
+</body>
+</html>

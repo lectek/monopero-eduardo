@@ -1,0 +1,61 @@
+<!-- templates/fragments/footer.html — adaptado de footer-client.html do ParaisoPet -->
+<footer th:fragment="footer" role="contentinfo" class="site-footer site-footer--showcase">
+  <a href="#main-content" class="skip-link">Pular para o conteúdo</a>
+
+  <div class="container footer-showcase">
+    <div class="footer-showcase__top">
+      <div class="footer-showcase__brand">
+        <img class="footer-showcase__logo" th:src="@{/images/logo-rota-das-praias.png}" alt="Rota das Praias" />
+      </div>
+
+      <div class="footer-showcase__help">
+        <h2>Precisa de ajuda com seu pedido?</h2>
+        <p>Fale com a gente no WhatsApp para tirar dúvidas sobre produtos, entrega e pagamento.</p>
+      </div>
+
+      <a class="footer-showcase__cta"
+         th:href="${@appProps.whatsappLink}"
+         target="_blank"
+         rel="noopener"
+         th:attr="aria-label=${'Falar no WhatsApp ' + @appProps.whatsappDisplay}">
+        Fale com o WhatsApp
+      </a>
+    </div>
+
+    <div class="footer-showcase__line" aria-hidden="true"></div>
+
+    <div class="footer-showcase__bottom">
+      <div class="footer-showcase__contacts">
+        <a class="footer-contact" th:href="${@appProps.whatsappLink}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3.9A10 10 0 0 0 4 19.5L3 22l2.6-.7A10 10 0 1 0 20 3.9ZM8.6 7.8c.2-.5.4-.5.6-.5h.5c.2 0 .4 0 .5.4.2.5.7 1.8.7 1.8.1.2.1.4 0 .6-.2.3-.5.7-.6.8-.1.1-.2.3 0 .6.2.3.9 1.4 2.2 2.2 1.5.9 1.8.8 2.1.7.2-.1.5-.4.6-.6.1-.2.3-.2.5-.1l1.7.8c.2.1.4.2.4.4 0 .3-.1 1-1 2-.9 1-2.2 1.1-3 .9-1-.2-2.2-.7-3.7-1.8-1.3-1-2.3-2.2-2.6-3.2-.3-1 0-2 .2-2.5Z"/></svg>
+          <span th:text="${@appProps.whatsappDisplay}">(83) 99927-6452</span>
+        </a>
+        <a class="footer-contact" th:href="${@appProps.whatsappLinkSecundario}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3.9A10 10 0 0 0 4 19.5L3 22l2.6-.7A10 10 0 1 0 20 3.9ZM8.6 7.8c.2-.5.4-.5.6-.5h.5c.2 0 .4 0 .5.4.2.5.7 1.8.7 1.8.1.2.1.4 0 .6-.2.3-.5.7-.6.8-.1.1-.2.3 0 .6.2.3.9 1.4 2.2 2.2 1.5.9 1.8.8 2.1.7.2-.1.5-.4.6-.6.1-.2.3-.2.5-.1l1.7.8c.2.1.4.2.4.4 0 .3-.1 1-1 2-.9 1-2.2 1.1-3 .9-1-.2-2.2-.7-3.7-1.8-1.3-1-2.3-2.2-2.6-3.2-.3-1 0-2 .2-2.5Z"/></svg>
+          <span th:text="${@appProps.whatsappDisplaySecundario}">(83) 99635-2709</span>
+        </a>
+        <a class="footer-contact" th:href="${@appProps.whatsappLinkTerciario}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3.9A10 10 0 0 0 4 19.5L3 22l2.6-.7A10 10 0 1 0 20 3.9ZM8.6 7.8c.2-.5.4-.5.6-.5h.5c.2 0 .4 0 .5.4.2.5.7 1.8.7 1.8.1.2.1.4 0 .6-.2.3-.5.7-.6.8-.1.1-.2.3 0 .6.2.3.9 1.4 2.2 2.2 1.5.9 1.8.8 2.1.7.2-.1.5-.4.6-.6.1-.2.3-.2.5-.1l1.7.8c.2.1.4.2.4.4 0 .3-.1 1-1 2-.9 1-2.2 1.1-3 .9-1-.2-2.2-.7-3.7-1.8-1.3-1-2.3-2.2-2.6-3.2-.3-1 0-2 .2-2.5Z"/></svg>
+          <span th:text="${@appProps.whatsappDisplayTerciario}">(83) 99613-3265</span>
+        </a>
+        <span class="footer-contact" th:if="${!#strings.isEmpty(@appProps.addressDisplay)}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+          <span th:text="${@appProps.addressDisplay}">João Pessoa/PB</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="footer-showcase__credits">
+      <small>
+        &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+        <span th:text="${@appProps.storeDisplayName}">Rota das Praias</span>
+        &bull; <a th:href="@{/politica-de-privacidade}">Política de Privacidade</a>
+        &bull; <a th:href="@{/termos-de-servico}">Termos de Serviço</a>
+        &bull; Desenvolvido por
+        <a href="https://instagram.com/lektec.tech" target="_blank" rel="noopener" class="credit-link">@lektec.tech</a>
+      </small>
+    </div>
+  </div>
+
+  <button class="btn-to-top" type="button" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Voltar ao topo">&uarr;</button>
+</footer>

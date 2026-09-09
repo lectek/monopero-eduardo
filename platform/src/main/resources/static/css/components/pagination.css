@@ -1,0 +1,35 @@
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.pagination .btn {
+  min-width: 110px;
+  justify-content: center;
+}
+
+.pagination .btn.disabled,
+.pagination .btn[aria-disabled="true"] {
+  opacity: 0.48;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.pagination .muted {
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination .btn {
+    width: 100%;
+  }
+}

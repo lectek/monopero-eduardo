@@ -1,0 +1,101 @@
+/* ===========================================
+   UTILITÁRIO: PADDING
+   Autor: LekTeC / Alex Morais
+   Descrição: Classes utilitárias de padding geral e por lado
+   Medidas: de 0 até 64px (múltiplos de 4px)
+   =========================================== */
+
+/* --- Padding Geral (p) --- */
+.p-0   { padding: 0px; }
+.p-4   { padding: 4px; }
+.p-8   { padding: 8px; }
+.p-12  { padding: 12px; }
+.p-16  { padding: 16px; }
+.p-20  { padding: 20px; }
+.p-24  { padding: 24px; }
+.p-28  { padding: 28px; }
+.p-32  { padding: 32px; }
+.p-36  { padding: 36px; }
+.p-40  { padding: 40px; }
+.p-44  { padding: 44px; }
+.p-48  { padding: 48px; }
+.p-52  { padding: 52px; }
+.p-56  { padding: 56px; }
+.p-60  { padding: 60px; }
+.p-64  { padding: 64px; }
+
+/* --- Padding Top (pt) --- */
+.pt-0   { padding-top: 0px; }
+.pt-4   { padding-top: 4px; }
+.pt-8   { padding-top: 8px; }
+.pt-12  { padding-top: 12px; }
+.pt-16  { padding-top: 16px; }
+.pt-20  { padding-top: 20px; }
+.pt-24  { padding-top: 24px; }
+.pt-28  { padding-top: 28px; }
+.pt-32  { padding-top: 32px; }
+.pt-36  { padding-top: 36px; }
+.pt-40  { padding-top: 40px; }
+.pt-44  { padding-top: 44px; }
+.pt-48  { padding-top: 48px; }
+.pt-52  { padding-top: 52px; }
+.pt-56  { padding-top: 56px; }
+.pt-60  { padding-top: 60px; }
+.pt-64  { padding-top: 64px; }
+
+/* --- Padding Bottom (pb) --- */
+.pb-0   { padding-bottom: 0px; }
+.pb-4   { padding-bottom: 4px; }
+.pb-8   { padding-bottom: 8px; }
+.pb-12  { padding-bottom: 12px; }
+.pb-16  { padding-bottom: 16px; }
+.pb-20  { padding-bottom: 20px; }
+.pb-24  { padding-bottom: 24px; }
+.pb-28  { padding-bottom: 28px; }
+.pb-32  { padding-bottom: 32px; }
+.pb-36  { padding-bottom: 36px; }
+.pb-40  { padding-bottom: 40px; }
+.pb-44  { padding-bottom: 44px; }
+.pb-48  { padding-bottom: 48px; }
+.pb-52  { padding-bottom: 52px; }
+.pb-56  { padding-bottom: 56px; }
+.pb-60  { padding-bottom: 60px; }
+.pb-64  { padding-bottom: 64px; }
+
+/* --- Padding Left (pl) --- */
+.pl-0   { padding-left: 0px; }
+.pl-4   { padding-left: 4px; }
+.pl-8   { padding-left: 8px; }
+.pl-12  { padding-left: 12px; }
+.pl-16  { padding-left: 16px; }
+.pl-20  { padding-left: 20px; }
+.pl-24  { padding-left: 24px; }
+.pl-28  { padding-left: 28px; }
+.pl-32  { padding-left: 32px; }
+.pl-36  { padding-left: 36px; }
+.pl-40  { padding-left: 40px; }
+.pl-44  { padding-left: 44px; }
+.pl-48  { padding-left: 48px; }
+.pl-52  { padding-left: 52px; }
+.pl-56  { padding-left: 56px; }
+.pl-60  { padding-left: 60px; }
+.pl-64  { padding-left: 64px; }
+
+/* --- Padding Right (pr) --- */
+.pr-0   { padding-right: 0px; }
+.pr-4   { padding-right: 4px; }
+.pr-8   { padding-right: 8px; }
+.pr-12  { padding-right: 12px; }
+.pr-16  { padding-right: 16px; }
+.pr-20  { padding-right: 20px; }
+.pr-24  { padding-right: 24px; }
+.pr-28  { padding-right: 28px; }
+.pr-32  { padding-right: 32px; }
+.pr-36  { padding-right: 36px; }
+.pr-40  { padding-right: 40px; }
+.pr-44  { padding-right: 44px; }
+.pr-48  { padding-right: 48px; }
+.pr-52  { padding-right: 52px; }
+.pr-56  { padding-right: 56px; }
+.pr-60  { padding-right: 60px; }
+.pr-64  { padding-right: 64px; }

@@ -1,0 +1,56 @@
+<!-- templates/fragments/header.html
+     Adaptado do ParaisoPet: removida toda a resolução de tenant/branding
+     dinâmica (não temos tela de configurações de marca ainda) — cores e
+     logo fixos, direto no CSS (theme/mini-mercadinho.css) e aqui. -->
+<header class="site-header" role="banner" th:fragment="header"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+
+  <div class="header-inner container-fluid">
+    <button class="sidebar-toggle header-control header-control--menu"
+            type="button"
+            data-sidebar-toggle
+            aria-label="Abrir o menu">
+      <span class="menu-icon" aria-hidden="true"></span>
+    </button>
+
+    <a th:href="@{/}" class="logo-link header-brand" aria-label="Página inicial">
+      <img class="brand-logo" th:src="@{/images/logo-rota-das-praias.png}" alt="Rota das Praias" />
+    </a>
+
+    <nav id="primary-nav" class="primary-nav primary-nav--desktop" aria-label="Menu principal">
+      <ul class="nav-list">
+        <li><a th:href="@{/}" class="menu-button" data-section="">Início</a></li>
+        <li><a th:href="@{/produtos}" class="menu-button" data-section="produtos">Produtos</a></li>
+        <li>
+          <a th:href="${@appProps.whatsappLink}" target="_blank" rel="noopener" class="menu-button">
+            Fale no WhatsApp
+          </a>
+        </li>
+        <li>
+          <a th:href="@{/carrinho}"
+             class="menu-button menu-button--icon menu-button--cart"
+             data-section="carrinho"
+             aria-label="Meu carrinho"
+             title="Meu carrinho"
+             data-cart-count-target>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6h15l-1.4 7.2a2 2 0 0 1-2 1.6H9.2L8.6 18h10.9v2H8.1a1.8 1.8 0 0 1-1.8-2.2L8 9H5V7h2l.5-2.2H3V3h5.2L9 6Zm3.3 16a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2Zm7 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2Z"/>
+            </svg>
+            <span class="cart-count-badge" data-cart-count hidden>0</span>
+          </a>
+        </li>
+        <li sec:authorize="isAuthenticated()">
+          <a th:href="@{/minha-conta}" class="menu-button">Minha conta</a>
+        </li>
+        <li sec:authorize="!isAuthenticated()">
+          <a th:href="@{/login}" class="menu-button">Entrar</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <button type="button" class="nav-backdrop" aria-label="Fechar menu"></button>
+  <script defer th:src="@{/js/header.js(v=${#dates.createNow().time})}"></script>
+  <script defer th:src="@{/js/sidebar.js(v=${#dates.createNow().time})}"></script>
+</header>

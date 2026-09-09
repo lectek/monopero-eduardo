@@ -1,0 +1,195 @@
+/* Responsive safety net for public and admin pages. */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+:where(.admin-page, .page, .content, .main-content, .admin-content, .layout-main, main, section, article, .card, .card-body) {
+  min-width: 0;
+}
+
+:where(.page-header, .page-actions, .form-actions, .actions, .toolbar, .admin-toolbar, .filter-actions) {
+  min-width: 0;
+}
+
+:where(.table-responsive, .table-wrap, .admin-table-wrap, .data-table-wrap) {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+:where(.table-responsive, .table-wrap, .admin-table-wrap, .data-table-wrap)::after {
+  content: "";
+  display: block;
+  height: 1px;
+}
+
+:where(.table, table) {
+  max-width: 100%;
+}
+
+:where(input, select, textarea, button, .btn) {
+  max-width: 100%;
+}
+
+:where(.btn, button, input, select, textarea) {
+  overflow-wrap: anywhere;
+}
+
+:where(.btn) {
+  min-height: 42px;
+  white-space: normal;
+}
+
+:where(.chip, .badge, .tag, .status, .pill) {
+  max-width: 100%;
+  white-space: normal;
+}
+
+:where(.card, .media-card, .product-card, .admin-card) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --page-pad: clamp(14px, 4vw, 20px);
+  }
+
+  :where(.page-header, .admin-page .page-header) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :where(.page-actions, .admin-page .page-actions, .toolbar, .admin-toolbar, .actions, .form-actions) {
+    justify-content: flex-start;
+  }
+
+  :where(.filter-bar, .filters, .search-row, .form-row, .media-grid, .stat-grid) {
+    grid-template-columns: 1fr !important;
+  }
+
+  :where(.admin-page .filter-bar .btn, .filter-bar .btn) {
+    justify-self: stretch;
+  }
+
+  :where(.admin-page .config-nav) {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  :where(.admin-page .config-nav__link) {
+    flex: 0 0 auto;
+  }
+
+  :where(.table) {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 720px) {
+  h1 {
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 5.5vw, 1.55rem);
+  }
+
+  h3 {
+    font-size: clamp(1.05rem, 4.5vw, 1.25rem);
+  }
+
+  :where(.container, .app-container, .admin-container, .layout-container, .main-content, .admin-content) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  :where(.card-body, .card-head, .admin-page .card-body) {
+    padding: clamp(14px, 4vw, 18px);
+  }
+
+  :where(.page-actions, .admin-page .page-actions, .toolbar, .admin-toolbar, .actions, .form-actions, .table .table-actions) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  :where(.page-actions .btn, .admin-page .page-actions .btn, .toolbar .btn, .admin-toolbar .btn, .actions .btn, .form-actions .btn, .table .table-actions .btn) {
+    width: 100%;
+  }
+
+  :where(.btn-group, .segmented, .tabs, .tab-list) {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  :where(.btn-group .btn, .segmented > *, .tabs > *, .tab-list > *) {
+    flex: 0 0 auto;
+  }
+
+  :where(.table th, .table td) {
+    padding: 0.62rem 0.72rem;
+  }
+
+  :where(.table .table-actions) {
+    min-width: 132px;
+  }
+
+  :where(dialog, .modal, .modal-content, .modal-card) {
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 560px) {
+  :where(.grid, .cards-grid, .product-grid, .products-grid, .catalog-grid, .dashboard-grid, .kpis, .stats-grid) {
+    grid-template-columns: 1fr !important;
+  }
+
+  :where(.hero, .hero-content, .hero-grid, .section-grid, .checkout-grid, .cart-grid, .account-grid) {
+    grid-template-columns: 1fr !important;
+  }
+
+  :where(.card, .empty-state, .alert, .admin-page .stat-card, .admin-page .media-card) {
+    border-radius: 14px;
+  }
+
+  :where(.page-title, .section-title, .card-title, .product-title) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(.hide-on-mobile) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  :where(.btn) {
+    padding-inline: 0.75rem;
+  }
+
+  :where(input, select, textarea) {
+    padding-inline: 0.78rem;
+  }
+
+  :where(.page-header, .admin-page .page-header) {
+    margin-bottom: 0.85rem;
+  }
+}
