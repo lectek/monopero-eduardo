@@ -44,10 +44,54 @@ sobe limpo.
 
 ---
 
-## ⬜ Fase A — Multi-tenancy + Acesso + Cadastros + Produtos + Estoque
+## 🔄 Fase A — Multi-tenancy + Acesso + Cadastros + Produtos + Estoque
 
 **A maior fase (~4-5 semanas de escopo) — tudo depois depende dela.** Não
 começar Fase B antes desta terminar de verdade.
+
+**Progresso até aqui** (commits `1cb6ca9`, `8c5fecd`):
+- ✅ Multi-tenancy real (schema por tenant, `TenantContext` +
+  `SchemaMultiTenantConnectionProvider` + `TenantGuard`), schema
+  `plataforma` (`Empresa`, `IdentidadeUsuario`, `refresh_tokens`),
+  `PlataformaMigrationRunner`/`TenantMigrationRunner` (Flyway manual).
+- ✅ `ProvisionamentoTenantService` ponta a ponta (schema + migrations +
+  papel ADMINISTRADOR com todas as permissões + usuário inicial + tipos
+  de movimentação de sistema), exposto em `POST /api/plataforma/empresas`.
+- ✅ `core.acesso` (Usuario/Papel/Permissao/papel_permissao/usuario_papel/
+  papel_restricao) + catálogo de permissões em código
+  (`PermissaoCatalogo`) sincronizado por tenant.
+- ✅ `core.cadastro`: os 8 cadastros do spec, tabelas criadas e mapeadas
+  (repositórios simples; ainda sem tela/endpoint de CRUD dedicado —
+  entram quando o primeiro consumidor real precisar, ex. Compras na
+  Fase B).
+- ✅ Login multiempresa (`IdentidadeService`/`AuthController`,
+  `POST /api/v1/auth/login`) + `JwtAuthenticationFilter` novo
+  (`/api/v1/**`, `@PreAuthorize` por permissão) — coexistindo com o login
+  antigo (`AdminAuthController`, `TENANT_UNICO` hardcoded), que continua
+  intocado até a Fase C.
+- ✅ `core.auditoria` (evento de domínio + `@TransactionalEventListener
+  BEFORE_COMMIT` — não Envers, ver docs/CONTEXTO.md).
+- ✅ `core.produto`: `Produto` genérico + `ProdutoService` (alteração de
+  preço sempre grava histórico + evento de auditoria) + `ProdutoController`.
+  **Decisão registrada**: o catálogo antigo do IMS
+  (`ImsProdutoRepository`, chave natural nome+cor+peso) **não foi
+  deletado ainda** — `CheckoutService`/storefront/`AdminProdutoController`
+  ainda o referenciam e só são repontados pro modelo novo na Fase C; os
+  dois catálogos coexistem em pacotes distintos (`core.produto` vs
+  `adapters.outbound.ims`) até lá, evitando quebrar a compilação do
+  checkout antes da hora certa de reescrevê-lo.
+- ✅ Validado ponta a ponta por teste de integração HTTP real
+  (`AuthAndProdutoFlowIT`, mais `MultiTenancyIsolationIT` e
+  `LedgerImutabilidadeIT` do critério de saída) — `mvn verify`: 8 testes,
+  todos passando.
+
+**Ainda faltando nesta fase**:
+- `MovimentacaoEstoqueService` (a tabela/ledger já existe desde a V005,
+  mas ainda não há serviço/endpoint gravando nela) + `saldo_estoque` +
+  inventário.
+- `tools/importador` (migra um `rbp.db` real pra um tenant Postgres novo,
+  modo dry-run primeiro).
+- CRUD/endpoints reais pros 8 cadastros (hoje só repositórios existem).
 
 ### O que entra
 
