@@ -1,43 +1,46 @@
 spring:
   application:
-    name: minimercadinho-saas
+    name: lojagenerica-platform
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
-    # date_class=TEXT força o driver a gravar LocalDateTime como texto formatado
-    # em vez do padrão dele (epoch millis como INTEGER) — sem isso, qualquer
-    # SELECT via JPA numa coluna de data (created_at, data, pagamento_recebido_em
-    # etc.) quebra com "Error parsing time stamp", porque o dialeto SQLite do
-    # Hibernate espera ler texto, não um número.
-    url: jdbc:sqlite:${SAAS_DB_PATH:./dev-data/rbp-sample.db}?date_class=TEXT&date_string_format=yyyy-MM-dd HH:mm:ss.SSS
-    driver-class-name: org.sqlite.JDBC
+    # Postgres único, schema-por-tenant (ver br.com.lojagenerica.multitenancy,
+    # Fase A) — este bloco configura a conexão padrão do control plane
+    # ("plataforma"); a troca de schema por request é feita em runtime pelo
+    # MultiTenantConnectionProvider, não por esta URL.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lojagenerica}
+    username: ${DB_USER:lojagenerica}
+    password: ${DB_PASSWORD:lojagenerica}
+    driver-class-name: org.postgresql.Driver
     hikari:
-      # SQLite so tolera bem 1 escritor por vez; pool pequeno + timeout de
-      # espera evita "database is locked" quando o IMS tambem esta gravando
-      # no mesmo arquivo ao mesmo tempo.
-      maximum-pool-size: 4
-      connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;"
+      maximum-pool-size: ${DB_POOL_MAX:10}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: none
     properties:
       hibernate:
-        dialect: org.hibernate.community.dialect.SQLiteDialect
+        # Sem "hibernate.dialect" explícito — Hibernate 6 detecta o dialeto
+        # certo a partir da conexão JDBC; setar isso à mão só gera um warning
+        # de depreciação (HHH90000025).
         format_sql: true
     show-sql: false
+  # Desligado de propósito: o autoconfigure padrão do Spring Boot só conhece
+  # 1 schema. PlataformaMigrationRunner/TenantMigrationRunner (Fase A) rodam
+  # o Flyway manualmente — uma vez contra "plataforma", uma vez por schema
+  # de tenant — usando os mesmos db/migration/{plataforma,tenant}.
+  flyway:
+    enabled: false
 
-# SAAS_DB_PATH é o único ponto de configuração do caminho do rbp.db (o
-# MESMO arquivo usado pelo IMS). Em dev aponta pro banco de amostra do
-# repo do IMS (dev-data/rbp-sample.db, já commitado aqui); em produção
-# (perfil docker), para o volume montado a partir de C:\ims_files\rbp.db
-# da loja — ver docker-compose.yml.
 # Módulo JWT portado do ParaisoPet (adapters/outbound/auth/jwt) — mesmas
 # chaves, um único namespace "jwt.*" (o SaúdeMaisFarma tem "jwt.*" e
 # "security.jwt.*" duplicados por acidente; não repetir isso aqui).
+# Sem toggle "jwt.enabled": num sistema multiempresa, autenticação nunca é
+# opcional — um interruptor que desliga o JWT é também um interruptor que
+# desliga o isolamento entre empresas (removido na Fase 0, junto com
+# NoopAuthTokenFacade).
 jwt:
-  enabled: ${JWT_ENABLED:false}
-  issuer: ${JWT_ISSUER:minimercadinho-saas}
+  issuer: ${JWT_ISSUER:lojagenerica-platform}
   secret: ${JWT_SECRET:dev-secret-change-me-32-chars-min}
   accessTokenExpirationMinutes: ${JWT_ACCESS_TOKEN_EXPIRATION_MINUTES:60}
   refreshTokenExpirationMinutes: ${JWT_REFRESH_TOKEN_EXPIRATION_MINUTES:43200}
@@ -45,7 +48,8 @@ jwt:
 # RefreshTokenJpaStore (component scan, default ligado) e o bean
 # inMemoryStore de JwtAutoConfiguration (default ligado) resolvem pro mesmo
 # tipo RefreshTokenStore — sem isto os dois colidem (bean ambíguo). Fixamos
-# explicitamente em "jpa" pra persistir refresh token no mesmo rbp.db.
+# explicitamente em "jpa" pra persistir refresh token (schema "plataforma",
+# ver Fase A).
 security:
   refresh:
     store: jpa
@@ -58,11 +62,9 @@ spring:
   config:
     activate:
       on-profile: dev
-jwt:
-  enabled: true
 logging:
   level:
-    br.com.minimercadinho: DEBUG
+    br.com.lojagenerica: DEBUG
 
 ---
 spring:
@@ -70,4 +72,4 @@ spring:
     activate:
       on-profile: docker
   datasource:
-    url: jdbc:sqlite:${SAAS_DB_PATH:/data/rbp.db}?date_class=TEXT&date_string_format=yyyy-MM-dd HH:mm:ss.SSS
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:lojagenerica}

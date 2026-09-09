@@ -1,67 +1,53 @@
-# Mini Mercadinho Rota — SaaS de compras web
+# Loja Genérica — plataforma comercial multiempresa
 
-Plataforma de e-commerce (Spring Boot) para a loja **Mini Mercadinho Rota —
-O Melhor da Zona Sul**. Roda ao lado do IMS (`lectek/raj-blow-plast-producao`,
-Java Swing) e lê/grava o **mesmo banco SQLite** (`rbp.db`) que o IMS já usa
-em produção — não é uma cópia nem uma sincronização assíncrona.
+Núcleo comercial genérico e configurável (Cadastros, Produtos, Estoque,
+Compras, Vendas/PDV, Financeiro, Fiscal, Relatórios etc. — ver
+`/home/alex/.claude/plans/bubbly-baking-donut.md` pro plano de fases
+completo). Nasceu adaptando o SaaS single-tenant "Mini Mercadinho Rota"
+(histórico em [`docs/ECOSSISTEMA.md`](docs/ECOSSISTEMA.md) e
+[`docs/DEPLOY-LOJA.md`](docs/DEPLOY-LOJA.md), preservados como referência)
+pra virar multiempresa de verdade: **schema Postgres separado por tenant**,
+sem lógica fixa de nenhum ramo de comércio específico.
 
-Visão completa do ecossistema (os dois softwares, os três repositórios,
-funções de cada módulo) em [`docs/ECOSSISTEMA.md`](docs/ECOSSISTEMA.md).
+O par desktop deste sistema — o PDV/caixa offline-first — vive em `../pdv`
+(adaptado de `raj-blow-plast-producao`, Java Swing).
 
 ## Stack
 
-- Java 21, Spring Boot 3.5.11, Thymeleaf, Spring Data JPA
-- SQLite (mesmo arquivo do IMS) via `hibernate-community-dialects`
-- JWT próprio (portado do ParaisoPet) para login do admin
-- Mercado Pago (Pix + cartão) para checkout online
-- Módulo de entrega com geocodificação/roteirização (Nominatim + OSRM),
-  também portado do ParaisoPet
+- Java 21, Spring Boot 3.5, Thymeleaf, Spring Data JPA
+- Postgres, schema por tenant (Flyway rodado manualmente por schema — ver
+  `br.com.lojagenerica.multitenancy`, Fase A do plano)
+- JWT próprio (portado do ParaisoPet) — sem toggle "desligar autenticação",
+  incompatível com isolamento multiempresa
+- Mercado Pago (Pix + cartão) para checkout online, módulo de entrega
+  (geocodificação/roteirização) — ambos portados do ParaisoPet, agora
+  opt-in por tenant
 
 ## Como rodar localmente
 
-Sem tocar no banco real da loja — usa uma cópia de amostra do `rbp.db`:
-
 ```bash
-./mvnw spring-boot:run
-# ou: mvn spring-boot:run
+docker compose up -d postgres   # só o banco, pra rodar a app fora do container
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Sobe em `http://localhost:8080` com o perfil `dev`, apontando pra
-`dev-data/rbp-sample.db` (banco de amostra, mesmo schema do IMS, vazio).
-
-Login do admin padrão em dev (definido em `AdminUserSeeder`, só quando a
-tabela `admin_users` está vazia):
-
-- E-mail: `admin@minimercadinho.local`
-- Senha: `admin123`
-
-## Rotas principais
-
-- Vitrine: `/`
-- Produtos: `/produtos`
-- Carrinho: `/carrinho`
-- Checkout: `/checkout`
-- Login/cadastro do cliente: `/login`, `/cadastro`, `/minha-conta`
-- Painel admin: `/admin/login`, `/admin/pedidos`, `/admin/produtos`, `/admin/entregas`
-- App do motoboy (mobile): `/motoboy` (mesmo login do admin, redireciona pela role)
-- Admin (API): `/api/admin/**` — Motoboy (API): `/api/motoboy/**`
-- Webhook Mercado Pago: `/webhooks/mercadopago`
+Sobe em `http://localhost:8080` contra Postgres local (`DB_*` em
+`application.yml`, defaults funcionam com o `docker-compose.yml` deste
+repo). Na Fase 0 o banco ainda não tem schema de tenant nenhum (isso entra
+na Fase A, via Flyway) — o objetivo desta fase é só a fundação (Postgres,
+Flyway, testes, remoção do acoplamento com SQLite/IMS).
 
 ## Produção
 
-Roda em Docker, 24h, na mesma máquina/rede do PC da loja — `docker-compose.yml`
-monta o `rbp.db` real como volume (`SAAS_DB_HOST_PATH`/`SAAS_DB_FILE`).
-Copie `.env.example` para `.env` (nunca commitado) e preencha `JWT_SECRET`,
-`MP_ACCESS_TOKEN` e, se quiser login com Google, `OAUTH_GOOGLE_CLIENT_ID`/
-`OAUTH_GOOGLE_CLIENT_SECRET` (aí é só acrescentar `,oauth2` em
-`SPRING_PROFILES_ACTIVE`). O admin **não** se cria por variável de ambiente
-em produção — só pela tela "Acesso admin do site" dentro do IMS (ver
-`docs/ECOSSISTEMA.md`).
+`docker-compose.yml` sobe Postgres + app + Caddy (HTTPS) + DuckDNS
+(atualização de IP dinâmico). Copie `.env.example` para `.env` (nunca
+commitado) e preencha `DB_PASSWORD`, `JWT_SECRET`, e o que mais for
+aplicável por tenant.
 
-## O que foi reaproveitado do ParaisoPet (`hospedapet`)
+## Reaproveitado de outros projetos do ecossistema
 
 Módulo de entrega, autenticação JWT, checkout Mercado Pago e boa parte do
-CSS/layout do site foram portados e adaptados do ParaisoPet — não
-reescritos do zero. Onde a adaptação foi mais que cosmética (ex.: o
-catálogo usa a chave natural nome+cor+peso do `rbp.db` em vez de um ID
-numérico), isso está documentado como comentário na própria classe.
+CSS/layout do site vieram do ParaisoPet — não foram reescritos do zero.
+Onde a adaptação foi mais que cosmética, o histórico está em
+`docs/ECOSSISTEMA.md`. O acoplamento antigo com a chave natural
+nome+cor+peso do IMS (`rbp.db`) está sendo removido nesta reescrita — ver
+o plano de fases pra detalhes (Fase A, módulo Produtos).

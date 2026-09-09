@@ -1,53 +1,65 @@
-# Roda o SaaS 24h na mesma rede/máquina do PC da loja, abrindo o MESMO
-# rbp.db que o IMS usa (via bind mount) — não é cópia nem sincronização.
-#
-# SAAS_DB_HOST_PATH deve apontar pra pasta real onde o rbp.db mora na loja
-# (ex.: C:\ims_files no Windows, ou o caminho equivalente se o container
-# rodar num mini-servidor Linux na mesma rede com a pasta compartilhada).
-# Em produção defina SAAS_DB_HOST_PATH=/caminho/real/ims_files e
-# SAAS_DB_FILE=rbp.db. Sem essas variáveis, sobe apontando pro banco de
-# amostra deste repo (dev-data/rbp-sample.db) — útil pra testar o container
-# sem tocar em dado real da loja.
+# Postgres único, schema-por-tenant (ver br.com.lojagenerica.multitenancy,
+# Fase A) — substitui o SQLite compartilhado com o IMS que este projeto usava
+# antes do pivot pra "Loja Genérica" multiempresa. O volume nomeado abaixo
+# persiste os dados entre reinícios do container; backup por tenant é feito
+# com `pg_dump --schema=<schema>`, não pelo volume inteiro.
 services:
-  saas:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lojagenerica}
+      POSTGRES_USER: ${DB_USER:-lojagenerica}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-lojagenerica}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-lojagenerica}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
     build: .
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "${SAAS_PORT:-8080}:8080"
     environment:
-      # Acrescente ",oauth2" (ex.: "docker,oauth2") quando OAUTH_GOOGLE_CLIENT_ID/
-      # SECRET estiverem configurados de verdade — sem isso o profile "oauth2" não
-      # ativa e o Google login some da tela, sem quebrar nada.
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-      SAAS_DB_PATH: /data/${SAAS_DB_FILE:-rbp-sample.db}
-      # Todas em branco por padrão — sem elas o app sobe mesmo assim (Pix fica
-      # indisponível, Google login some da tela). O admin NÃO se cria por
-      # variável de ambiente em produção — isso só acontece pela tela "Acesso
-      # admin do site" dentro do IMS (ver docs/ECOSSISTEMA.md, seção 3.5).
-      # Defina de verdade num arquivo .env ao lado deste compose (nunca
-      # commitado — ver .env.example) antes de subir em produção.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-lojagenerica}
+      DB_USER: ${DB_USER:-lojagenerica}
+      DB_PASSWORD: ${DB_PASSWORD:-lojagenerica}
+      # Em branco por padrão — sem elas o app sobe mesmo assim (Pix fica
+      # indisponível, Google login some da tela). Defina de verdade num
+      # arquivo .env ao lado deste compose (nunca commitado — ver .env.example)
+      # antes de subir em produção.
       JWT_SECRET: ${JWT_SECRET:-}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
       OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
-    volumes:
-      - ${SAAS_DB_HOST_PATH:-./dev-data}:/data
 
-  # Mantém mercadinhorota.duckdns.org apontando pro IP público atual da loja —
-  # a rede da loja provavelmente tem IP dinâmico, sem isso o domínio "quebra"
-  # toda vez que o IP mudar. Sem DUCKDNS_TOKEN definido, o serviço só avisa
+  # Mantém o domínio público apontando pro IP público atual — a rede
+  # provavelmente tem IP dinâmico, sem isso o domínio "quebra" toda vez que o
+  # IP mudar. Sem DUCKDNS_TOKEN/DUCKDNS_DOMAIN definidos, o serviço só avisa
   # (uma vez) e fica ocioso — não fica reiniciando em loop.
   duckdns:
     image: alpine:3.20
     restart: unless-stopped
     environment:
-      DUCKDNS_DOMAIN: ${DUCKDNS_DOMAIN:-mercadinhorota}
+      DUCKDNS_DOMAIN: ${DUCKDNS_DOMAIN:-}
       DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:-}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        if [ -z "$$DUCKDNS_TOKEN" ]; then
-          echo "DUCKDNS_TOKEN nao configurado no .env — atualizacao de IP desativada.";
+        if [ -z "$$DUCKDNS_TOKEN" ] || [ -z "$$DUCKDNS_DOMAIN" ]; then
+          echo "DUCKDNS_TOKEN e/ou DUCKDNS_DOMAIN nao configurados no .env — atualizacao de IP desativada.";
           sleep infinity;
         fi
         while true; do
@@ -58,7 +70,7 @@ services:
 
   # HTTPS automático (Let's Encrypt) pro domínio público — sem isso o site só
   # responde em http://IP:8080, sem certificado. Precisa das portas 80/443
-  # liberadas/encaminhadas no roteador da loja pro IP desta máquina.
+  # liberadas/encaminhadas no roteador pro IP desta máquina.
   proxy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -70,8 +82,9 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - saas
+      - app
 
 volumes:
+  postgres_data:
   caddy_data:
   caddy_config:

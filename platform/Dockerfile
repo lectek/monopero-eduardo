@@ -7,8 +7,7 @@ RUN mvn -q -e -B -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /build/target/minimercadinho-saas-*.jar app.jar
+COPY --from=build /build/target/lojagenerica-platform-*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=docker
-ENV SAAS_DB_PATH=/data/rbp.db
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
