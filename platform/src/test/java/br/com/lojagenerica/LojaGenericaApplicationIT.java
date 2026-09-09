@@ -12,9 +12,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Critério de saída da Fase 0: a aplicação sobe contra um Postgres vazio
- * (sem nenhuma migration ainda — isso é Fase A). Prova que o pivot pra
- * Postgres + schema-por-tenant não quebrou o boot da aplicação.
+ * Critério de saída da Fase 0: a aplicação sobe contra um Postgres vazio.
+ * Critério de saída da Fase A: sobe também com os runners de migration
+ * (control plane "plataforma") já registrados, contra 0 empresas.
  */
 @SpringBootTest
 @Testcontainers
