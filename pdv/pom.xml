@@ -1,70 +1,85 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>IMS</groupId>
-  <artifactId>IMS</artifactId>
-  <version>1.0.6</version>
+  <groupId>br.com.lojagenerica</groupId>
+  <artifactId>lojagenerica-pdv-client</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <junit.version>5.10.2</junit.version>
+  </properties>
   <build>
-    <sourceDirectory>src</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>src</directory>
-        <excludes>
-          <exclude>**/*.java</exclude>
-        </excludes>
-      </resource>
-    </resources>
+    <!-- Layout padrão (src/main/java, src/main/resources, src/test/java) — o antigo
+         "sourceDirectory=src" plano não escala com um pacote novo (br.com.lojagenerica.pdvclient)
+         convivendo com o legado (mysquare.core) durante a migração incremental. -->
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
+        <version>3.13.0</version>
       </plugin>
       <plugin>
-	    <groupId>org.apache.maven.plugins</groupId>
-	    <artifactId>maven-assembly-plugin</artifactId>
-	    <executions>
-	        <execution>
-	            <phase>package</phase>
-	            <goals>
-	                <goal>single</goal>
-	            </goals>
-	            <configuration>
-	                <archive>
-	                <manifest>
-	                    <mainClass>mysquare.core.IMStart</mainClass>
-	                </manifest>
-	                </archive>
-	                <descriptorRefs>
-	                    <descriptorRef>jar-with-dependencies</descriptorRef>
-	                </descriptorRefs>
-                    <finalName>${project.artifactId}-${project.version}</finalName>
-                    <appendAssemblyId>false</appendAssemblyId>
-	            </configuration>
-	        </execution>
-	    </executions>
-	  </plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.7.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <archive>
+                <manifest>
+                  <!-- Repontado quando IMStart for reescrito contra o backbone novo (ver docs/ROADMAP.md, Fase D). -->
+                  <mainClass>mysquare.core.IMStart</mainClass>
+                </manifest>
+              </archive>
+              <descriptorRefs>
+                <descriptorRef>jar-with-dependencies</descriptorRef>
+              </descriptorRefs>
+              <finalName>${project.artifactId}-${project.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
-  	<dependency>
-  		<groupId>org.xerial</groupId>
-  		<artifactId>sqlite-jdbc</artifactId>
-  		<version>3.28.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.json</groupId>
-  		<artifactId>json</artifactId>
-  		<version>20240303</version>
-  	</dependency>
-  	<dependency>
-  		<!-- Mesmo formato de hash ($2a$) que o BCryptPasswordEncoder do SaaS usa,
-  		     pra senha criada aqui já bater com o login do site sem conversão. -->
-  		<groupId>org.mindrot</groupId>
-  		<artifactId>jbcrypt</artifactId>
-  		<version>0.4</version>
-  	</dependency>
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.45.3.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20240303</version>
+    </dependency>
+    <dependency>
+      <!-- Mesmo formato de hash ($2a$) que o BCryptPasswordEncoder do servidor usa —
+           permite checar a senha cacheada localmente (login offline do terminal)
+           sem reimplementar o algoritmo. -->
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.26.3</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
