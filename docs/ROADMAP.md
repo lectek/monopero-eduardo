@@ -44,7 +44,7 @@ sobe limpo.
 
 ---
 
-## 🔄 Fase A — Multi-tenancy + Acesso + Cadastros + Produtos + Estoque
+## ✅ Fase A — Multi-tenancy + Acesso + Cadastros + Produtos + Estoque (concluída)
 
 **A maior fase (~4-5 semanas de escopo) — tudo depois depende dela.** Não
 começar Fase B antes desta terminar de verdade.
@@ -85,13 +85,32 @@ começar Fase B antes desta terminar de verdade.
   `LedgerImutabilidadeIT` do critério de saída) — `mvn verify`: 8 testes,
   todos passando.
 
-**Ainda faltando nesta fase**:
-- `MovimentacaoEstoqueService` (a tabela/ledger já existe desde a V005,
-  mas ainda não há serviço/endpoint gravando nela) + `saldo_estoque` +
-  inventário.
-- `tools/importador` (migra um `rbp.db` real pra um tenant Postgres novo,
-  modo dry-run primeiro).
-- CRUD/endpoints reais pros 8 cadastros (hoje só repositórios existem).
+- ✅ `MovimentacaoEstoqueService` (chokepoint único de escrita no ledger,
+  resolve conversão de unidade, custo médio ponderado, idempotente por
+  origem, lock pessimista em `saldo_estoque`) + `EstoqueController`.
+- ✅ `tools/importador` (`RbpImportService`): migra produtos + estoque
+  inicial + contas admin de um `rbp.db` real pra um tenant novo,
+  `analisar()` dry-run sempre antes de `importar()` real. **Não migra
+  histórico de vendas** (`sold_records`) — depende do agregado Venda, que
+  só existe a partir da Fase C; rodar de novo então completa essa parte.
+  Cor/peso do legado viram texto solto na descrição por ora (não
+  `produto_atributo` estruturado — completar quando os 8 cadastros
+  ganharem CRUD de verdade).
+- Bug real encontrado pelo próprio teste de integração durante o
+  desenvolvimento desta fase: uma chamada a `identidadeUsuarioRepository`
+  (schema "plataforma") rodando de dentro de um bloco com
+  `TenantContext` setado pro schema do tenant — exatamente o risco de
+  vazamento/cross-schema que o design previa, agora confirmado na prática
+  e corrigido. Reforça que o padrão "nunca aninhar uma chamada
+  plataforma-schema dentro de uma transação já aberta pro schema do
+  tenant" precisa de atenção deliberada em toda fase futura que toque os
+  dois mundos.
+
+**Ficou pra quando um consumidor real precisar** (não bloqueia as
+próximas fases): CRUD/endpoints reais pros 8 cadastros — hoje só
+repositórios existem; entram quando, por exemplo, Compras (Fase B)
+precisar de fato cadastrar um fornecedor ou uma condição de pagamento
+pela UI.
 
 ### O que entra
 
