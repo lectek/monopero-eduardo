@@ -204,7 +204,7 @@ condições (rateio de frete) → confirmar → saldo de estoque e custo médio
 do produto corretos → confirmar de novo é no-op. `mvn verify`: 11 testes,
 BUILD SUCCESS.
 
-## ⬜ Fase C — Clientes + Vendas/PDV (lado servidor)
+## 🔄 Fase C — Clientes + Vendas/PDV (lado servidor)
 
 Cliente entra **antes** de Venda (não depois, como a ordem do spec
 sugeriria) porque `venda.cliente_id` referencia cliente. Reescreve
@@ -214,8 +214,28 @@ de hoje, `StatusPedido`/`TipoPagamento`/`MotivoCancelamentoPedido`, viram
 loja online recolocados pra montar `Venda` — a lógica do Mercado Pago e o
 módulo de entrega sobrevivem quase intactos.
 
-**Saída**: `VendaService.registrar()` idempotente por UUID, valida
-desconto contra permissão do papel.
+- ✅ `Cliente` + `ClienteController` (só `nome` obrigatório).
+- ✅ `Venda`+`ItemVenda`+`VendaPagamento` (`core.venda`) + `VendaService`:
+  `registrar()` monta e confirma numa chamada só, idempotente por UUID
+  gerado no cliente (crítico pra Fase D); valida desconto contra
+  `papel_restricao` do usuário; `cancelar()` reverte estoque via
+  movimentação de entrada, auditado, idempotente.
+- ✅ Validado ponta a ponta (`VendaFlowIT`): registrar baixa estoque,
+  reenvio idempotente não duplica, cancelar devolve estoque, cancelar de
+  novo é no-op. `mvn verify`: 12 testes, BUILD SUCCESS.
+- ⬜ **Ainda falta** (a parte maior e mais arriscada da fase): repontar
+  `CheckoutService`/storefront/módulo de entrega pra montar `Venda` em vez
+  de `PedidoEntity`, e só então deletar `PedidoEntity`, `StatusPedido`,
+  `TipoPagamento`, `MotivoCancelamentoPedido`, e o catálogo antigo do IMS
+  (`ImsProdutoRepository`, `CatalogoService`, `AdminProdutoController`,
+  `PublicProdutoController`) que ainda coexistem com `core.produto`. Isso
+  toca o gateway de pagamento real (Mercado Pago) e o roteamento de
+  entrega — feito numa etapa separada, não misturado com a construção do
+  núcleo novo.
+
+**Saída completa da fase** (quando a parte pendente acima terminar):
+nenhuma referência a `PedidoEntity`/catálogo antigo restando no código;
+checkout e storefront funcionando contra `Venda`.
 
 ## ⬜ Fase D — Cliente PDV offline + sincronização
 
