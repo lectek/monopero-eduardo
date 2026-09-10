@@ -2,6 +2,7 @@ package br.com.lojagenerica.pdv;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.lojagenerica.core.acesso.UsuarioRepository;
 import br.com.lojagenerica.core.acesso.web.AuthController;
 import br.com.lojagenerica.core.cadastro.FormaPagamento;
 import br.com.lojagenerica.core.cadastro.FormaPagamentoRepository;
@@ -82,6 +83,8 @@ class PdvSyncFlowIT {
     private SaldoEstoqueRepository saldoEstoqueRepository;
     @Autowired
     private MovimentacaoEstoqueService movimentacaoEstoqueService;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     private String schema;
     private Long produtoId;
@@ -186,6 +189,55 @@ class PdvSyncFlowIT {
                 HttpMethod.GET, new HttpEntity<>(terminalHeaders), PullResponseLocalEstoque.class);
         assertThat(locaisEstoque.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(locaisEstoque.getBody().itens()).extracting(LocalEstoqueSyncDTO::id).contains(localEstoqueId);
+    }
+
+    /**
+     * Regressão: o payload do PDV só carrega usuarioId (não e-mail), mas
+     * VendaService.validarDesconto checa permissão pelo e-mail — sem
+     * resolver usuarioId -> email dentro de PdvSyncService, qualquer
+     * desconto vindo do caixa falhava com "usuário não identificado",
+     * mesmo pro dono (ADMINISTRADOR).
+     */
+    @Test
+    void vendaComDescontoResolveEmailDoUsuarioAPartirDoId() {
+        String sufixo = "pdv-desc-" + System.nanoTime();
+        Empresa empresa = provisionamentoTenantService.provisionar(new ProvisionarEmpresaCommand(
+                sufixo, sufixo, null, sufixo, "Dono", "dono@" + sufixo + ".example", "senhaForte123"));
+        schema = empresa.getSchemaNome();
+        prepararCadastrosComEstoqueInicial();
+
+        String accessToken = login("dono@" + sufixo + ".example", "senhaForte123");
+        HttpHeaders jwtHeaders = new HttpHeaders();
+        jwtHeaders.setBearerAuth(accessToken);
+        ResponseEntity<TerminalService.TerminalCriadoResultado> pareado = restTemplate.exchange(
+                url("/api/v1/pdv/terminais"), HttpMethod.POST,
+                new HttpEntity<>(new TerminalController.CriarTerminalRequest("Caixa 1"), jwtHeaders),
+                TerminalService.TerminalCriadoResultado.class);
+        String apiKey = pareado.getBody().apiKey();
+
+        TenantContext.set(schema);
+        Long donoId;
+        try {
+            donoId = usuarioRepository.findByEmailIgnoreCase("dono@" + sufixo + ".example").orElseThrow().getId();
+        } finally {
+            TenantContext.clear();
+        }
+
+        HttpHeaders terminalHeaders = new HttpHeaders();
+        terminalHeaders.add("X-Terminal-Api-Key", apiKey);
+
+        VendaRegistradaPayload payload = new VendaRegistradaPayload(localEstoqueId, null, donoId, new BigDecimal("5.00"),
+                List.of(new VendaRegistradaPayload.ItemPayload(produtoId, new BigDecimal("3"), unidadeId,
+                        new BigDecimal("10.00"), null)),
+                List.of(new VendaRegistradaPayload.PagamentoPayload(formaPagamentoId, new BigDecimal("25.00"),
+                        new BigDecimal("25.00"), BigDecimal.ZERO)));
+        EventoPushRequest evento = new EventoPushRequest(UUID.randomUUID(), TipoEventoPdv.VENDA_REGISTRADA,
+                Instant.now(), paraMapa(payload));
+
+        ResponseEntity<PdvSyncController.PushResponse> resultado = push(terminalHeaders, evento);
+
+        assertThat(resultado.getBody().resultados().get(0).status())
+                .isEqualTo(ResultadoEventoResponse.StatusEvento.ACEITO);
     }
 
     private Map<String, Object> paraMapa(Object payload) {

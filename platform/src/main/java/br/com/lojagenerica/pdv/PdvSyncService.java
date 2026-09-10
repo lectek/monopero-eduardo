@@ -1,5 +1,7 @@
 package br.com.lojagenerica.pdv;
 
+import br.com.lojagenerica.core.acesso.Usuario;
+import br.com.lojagenerica.core.acesso.UsuarioRepository;
 import br.com.lojagenerica.core.cadastro.FormaPagamento;
 import br.com.lojagenerica.core.cadastro.FormaPagamentoRepository;
 import br.com.lojagenerica.core.cadastro.LocalEstoque;
@@ -47,18 +49,20 @@ public class PdvSyncService {
     private final ProdutoRepository produtoRepository;
     private final FormaPagamentoRepository formaPagamentoRepository;
     private final LocalEstoqueRepository localEstoqueRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ObjectMapper objectMapper;
 
     public PdvSyncService(PdvEventoRecebidoRepository eventoRecebidoRepository, VendaRepository vendaRepository,
                            VendaService vendaService, ProdutoRepository produtoRepository,
                            FormaPagamentoRepository formaPagamentoRepository, LocalEstoqueRepository localEstoqueRepository,
-                           ObjectMapper objectMapper) {
+                           UsuarioRepository usuarioRepository, ObjectMapper objectMapper) {
         this.eventoRecebidoRepository = eventoRecebidoRepository;
         this.vendaRepository = vendaRepository;
         this.vendaService = vendaService;
         this.produtoRepository = produtoRepository;
         this.formaPagamentoRepository = formaPagamentoRepository;
         this.localEstoqueRepository = localEstoqueRepository;
+        this.usuarioRepository = usuarioRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -137,9 +141,16 @@ public class PdvSyncService {
                                 p.formaPagamentoId(), p.valor(), p.valorRecebido(), p.troco()))
                         .toList();
 
+        // validarDesconto (em VendaService) checa permissão de desconto pelo e-mail, não pelo id —
+        // o payload do PDV só carrega usuarioId, então resolve aqui. Sem usuarioId (caixa sem login
+        // ainda), email fica null e qualquer desconto>0 falha fechado (comportamento correto: sem
+        // usuário identificado, nenhum desconto é permitido).
+        String usuarioEmail = payload.usuarioId() == null ? null
+                : usuarioRepository.findById(payload.usuarioId()).map(Usuario::getEmail).orElse(null);
+
         return vendaService.registrar(new RegistrarVendaCommand(
                 evento.uuid(), CanalVenda.PDV, payload.localEstoqueId(), payload.clienteId(), terminalId,
-                payload.usuarioId(), null, payload.descontoValor(), null, itens, pagamentos));
+                payload.usuarioId(), usuarioEmail, payload.descontoValor(), null, itens, pagamentos));
     }
 
     private Venda cancelarVenda(EventoPushRequest evento) {
