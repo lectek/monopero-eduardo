@@ -265,23 +265,62 @@ bloqueiam as próximas fases): a URL de webhook do Mercado Pago ainda usa
 staff confirma dinheiro → baixa estoque) e que Pix sem token configurado
 falha de forma limpa (409), não 500.
 
-## ⬜ Fase D — Cliente PDV offline + sincronização
+## 🔄 Fase D — Cliente PDV offline + sincronização
 
-Aqui é onde `pdv/` (ainda intocado desde a cópia inicial) finalmente muda.
 Depende da Fase C estar estável — mudar `Venda` depois desta fase custa em
 dobro (servidor + schema local + contrato de sync).
 
 Invariante estrutural: **o caixa só grava registros append-only escopados
 ao terminal — nunca escreve dado de cadastro.** Isso resolve sozinho o
-problema de conflito entre dois caixas. Mecanismo: SQLite local
-(`pdv-local.db`, não mais `rbp.db`) + tabela `sync_outbox` (evento gravado
-na mesma transação que a venda) + API de sync com autenticação de terminal
-separada de autenticação de usuário. Pix vira online-only (token nunca
+problema de conflito entre dois caixas. Pix vira online-only (token nunca
 mais fica em arquivo texto na loja).
 
-**Saída**: venda feita offline reflete no estoque local na hora, chega ao
-servidor depois de reconectar, reconexão no meio do envio não duplica a
-venda (idempotência por UUID do evento).
+### ✅ Lado servidor — concluído
+
+- `pdv.Terminal`/`TerminalRepository` (migração `V012__pdv_terminal.sql`):
+  pareamento gera uma chave de API (`"<schema>.<segredo>"`, segredo de 32
+  bytes aleatórios) — só o hash SHA-256 é persistido. O prefixo de schema é
+  o que permite ao `TerminalAuthenticationFilter` resolver o tenant **antes**
+  de autenticar, já que sync roda sem usuário logado (chave de terminal, não
+  JWT). Permissão nova `TERMINAL_GERENCIAR` protege
+  `POST /api/v1/pdv/terminais`.
+- `pdv.PdvSyncService` + `PdvSyncController`
+  (`POST /api/v1/pdv/sync/push`, `GET /api/v1/pdv/sync/pull`):
+  - Push é idempotente por `evento_uuid` via tabela `pdv_evento_recebido` —
+    reenviar o mesmo evento (reconexão no meio do envio) responde
+    `DUPLICADO` em vez de duplicar a venda. `VENDA_REGISTRADA` usa o próprio
+    uuid do evento como uuid da `Venda`, herdando a idempotência que
+    `VendaService.registrar` já tem por baixo; `VENDA_CANCELADA` resolve a
+    venda por uuid e reusa `VendaService.cancelar`.
+    Falha de negócio (produto inexistente etc.) vira `REJEITADO` com a
+    mensagem, nunca 500 — fica pro terminal decidir o que fazer.
+  - Pull é incremental por cursor `atualizado_em` — só `produto` por
+    enquanto (`ProdutoRepository.findByAtualizadoEmAfterOrderByAtualizadoEmAsc`);
+    outros cadastros (categoria, unidade, forma de pagamento, cliente)
+    entram quando o cliente Swing precisar de fato.
+  - `PdvSyncFlowIT` prova o ciclo completo: pareamento → push venda → retry
+    idempotente → push cancelamento → pull com cursor avançando.
+
+**Saída confirmada**: `mvn verify`: 15 classes de IT, BUILD SUCCESS.
+
+### ⬜ Lado cliente (Swing) — não iniciado
+
+Reescrita do `pdv/` (ainda intocado desde a cópia inicial) contra o
+servidor acima: SQLite local (`pdv-local.db`, não mais `rbp.db`) + tabela
+`sync_outbox` (evento gravado na mesma transação SQLite que a venda) +
+tela de pareamento de terminal + thread de sync em background com retry
+com backoff. Envolve dividir `Db.java` em `LocalDb`+DAOs, reescrever
+`Sale.java`→`VendaScreen`, deletar `Production.java`/`ModifyProducts.java`/
+`AdminSaas.java`, reescrever `Dispatch.java`→`AjusteEstoqueScreen`, subir
+`pom.xml` de Java 8→17 com `jpackage` (ver plano completo, §6/§7). É um
+esforço de GUI desktop com perfil bem diferente do resto do backend — vale
+tratar como sua própria frente de trabalho, não como continuação direta do
+que já foi construído aqui.
+
+**Saída (quando entrar)**: venda feita offline reflete no estoque local na
+hora, chega ao servidor depois de reconectar, reconexão no meio do envio
+não duplica a venda (já provado do lado servidor; falta o outbox do lado
+cliente).
 
 ## ⬜ Fase E — Financeiro
 
