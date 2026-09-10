@@ -171,17 +171,38 @@ pela UI.
 
 ---
 
-## ⬜ Fase B — Fornecedores + Compras
+## ✅ Fase B — Fornecedores + Compras (concluída)
 
 Direto do fluxo do spec: nada relevante entra em estoque sem uma compra.
 `fornecedor`, `fornecedor_contato`, `fornecedor_produto`,
 `condicao_pagamento`, `compra`+`item_compra`. Geração de conta a pagar fica
 atrás de uma porta (`GeradorContaPagar`, no-op por enquanto) pra Fase E
-plugar sem tocar em `CompraService`. Módulo não existe hoje — nada é
+plugar sem tocar em `CompraService`. Módulo não existia — nada foi
 reaproveitado do código atual.
 
-**Saída**: `CompraService.confirmar()` grava ledger de entrada + custo
-médio + conta a pagar numa transação só, idempotente ao repetir a chamada.
+- ✅ `Fornecedor` + `FornecedorController` (`FornecedorContato`/
+  `FornecedorProduto` só como tabela por ora — mesmo padrão de "entidade
+  Java quando um consumidor real precisar" já usado pros 8 cadastros).
+- ✅ `CondicaoPagamento` (cadastro).
+- ✅ `Compra`+`ItemCompra` com rateio de frete/outros custos proporcional
+  ao subtotal de cada item — vira custo considerado no módulo de
+  Rentabilidade (Fase H).
+- ✅ `CompraService.confirmar()`: grava 1 movimentação de estoque por item
+  (ledger, origem rastreável) + atualiza custo do produto via o mesmo
+  fluxo auditado de `ProdutoService.alterarPreco` + chama
+  `GeradorContaPagar` (só `NoopGeradorContaPagar` por enquanto). Idempotente
+  pelo status da compra + índice único do ledger.
+- Bug real pego pelo teste de integração: o caminho idempotente de
+  `confirmar()` retornava cedo sem inicializar a coleção lazy `itens`
+  dentro da transação — só quebrava na segunda chamada (LazyInitialization
+  fora da sessão, `open-in-view=false`). Corrigido; reforça (junto com o
+  bug da Fase A) que toda escrita cross-schema/cross-sessão nesta
+  arquitetura precisa de atenção deliberada, não só "funcionou uma vez".
+
+**Saída confirmada**: `CompraFlowIT` — fornecedor → compra → item →
+condições (rateio de frete) → confirmar → saldo de estoque e custo médio
+do produto corretos → confirmar de novo é no-op. `mvn verify`: 11 testes,
+BUILD SUCCESS.
 
 ## ⬜ Fase C — Clientes + Vendas/PDV (lado servidor)
 
