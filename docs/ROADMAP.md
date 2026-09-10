@@ -294,16 +294,23 @@ mais fica em arquivo texto na loja).
     venda por uuid e reusa `VendaService.cancelar`.
     Falha de negócio (produto inexistente etc.) vira `REJEITADO` com a
     mensagem, nunca 500 — fica pro terminal decidir o que fazer.
-  - Pull é incremental por cursor `atualizado_em` — só `produto` por
-    enquanto (`ProdutoRepository.findByAtualizadoEmAfterOrderByAtualizadoEmAsc`);
-    outros cadastros (categoria, unidade, forma de pagamento, cliente)
-    entram quando o cliente Swing precisar de fato.
+  - Pull tem dois formatos: `produto` é incremental por cursor
+    `atualizado_em` (catálogo pode ser grande); `forma_pagamento` e
+    `local_estoque` são cadastros pequenos — devolvem a lista inteira
+    sempre, sem paginação (adicionados quando o cliente Swing precisou
+    de fato, ver abaixo). Categoria/unidade/cliente ainda faltam.
   - `PdvSyncFlowIT` prova o ciclo completo: pareamento → push venda → retry
-    idempotente → push cancelamento → pull com cursor avançando.
+    idempotente → push cancelamento → pull de produto/forma_pagamento/
+    local_estoque com cursor avançando.
+  - **Fix**: `VendaService.validarDesconto` checa permissão pelo e-mail do
+    usuário, mas o payload do PDV só carrega `usuarioId` —
+    `PdvSyncService.registrarVenda` agora resolve o e-mail via
+    `UsuarioRepository` antes de montar o comando; sem isso, qualquer
+    desconto vindo do caixa falhava sempre, mesmo pro dono.
 
-**Saída confirmada**: `mvn verify`: 15 classes de IT, BUILD SUCCESS.
+**Saída confirmada**: `mvn verify`: 16 classes de IT, BUILD SUCCESS.
 
-### 🔄 Lado cliente (Swing) — backbone não-visual concluído, telas pendentes
+### 🔄 Lado cliente (Swing) — backbone completo, App rodável com pareamento + Venda
 
 `pdv/` saiu do layout antigo (`sourceDirectory=src`, Java 8) para o padrão
 Maven (`src/main/java`, Java 17) — o legado (`mysquare.core`, intocado
@@ -311,12 +318,14 @@ desde a cópia inicial) foi só movido (`git mv`, mesmo pacote), pra caber
 lado a lado com o pacote novo `br.com.lojagenerica.pdvclient` durante a
 migração incremental.
 
-Construído e testado (12 testes JUnit5, sem precisar de GUI nem servidor
-real — `HttpServer` embutido faz de servidor falso):
+Backbone não-visual, construído e testado (18 testes JUnit5, sem
+precisar de GUI nem servidor real — `HttpServer` embutido faz de servidor
+falso):
 - `LocalDb`: uma conexão por instância (não mais o singleton estático do
   antigo `Db.java`, que tinha deadlock latente assim que uma thread de
   sync existisse ao lado da EDT do Swing) + bootstrap de schema
-  idempotente (`cache_produto`, `sync_cursor`, `sync_outbox`,
+  idempotente (`cache_produto`, `cache_forma_pagamento`,
+  `cache_local_estoque`, `sync_cursor`, `sync_outbox`,
   `venda_local[_item|_pagamento]`).
 - `VendaLocalDao.registrarVenda`: grava o espelho local da venda e
   enfileira o evento de sync na MESMA transação SQLite — a invariante
@@ -327,32 +336,51 @@ real — `HttpServer` embutido faz de servidor falso):
 - `OutboxDao`: fila local com backoff exponencial por evento (5s a
   15min) em erro de rede, status PENDENTE/ENVIADO/REJEITADO.
 - `ApiClient` + `SyncScheduler`: thread única em background, drena o
-  outbox a cada 10s e puxa o catálogo (cursor incremental) a cada 60s
-  contra o servidor — nunca bloqueia a EDT.
+  outbox a cada 10s e puxa produto/forma_pagamento/local_estoque a cada
+  60s (cada um isolado em seu próprio try/catch) contra o servidor —
+  nunca bloqueia a EDT.
 - `ConfiguracaoLocalStore`/`LocalPaths`: estado de pareamento do
   terminal (`servidorBaseUrl` + `terminalApiKey`) em
   `%APPDATA%/lojagenerica/config.properties`.
 
-### ⬜ Telas (Swing) — não iniciado
+Telas construídas (compiladas e revisadas — **não verificadas
+visualmente nesta sessão**, sem display disponível; precisam de um
+primeiro uso manual numa máquina de verdade antes de confiar no fluxo
+completo):
+- `TelaPareamento`: cola a chave de API gerada pelo admin web
+  (`POST /api/v1/pdv/terminais`), testa a conexão de verdade antes de
+  habilitar "Salvar".
+- `VendaScreen`: substitui `Sale.java` contra o backbone novo — busca
+  produto por nome/código de barras em `cache_produto` (sem a cascata
+  cor/peso do IMS), quantidade em ponto flutuante, local de estoque e
+  forma de pagamento escolhidos do que já sincronizou. Fora desta leva
+  de propósito: desconto (precisa de login pra identificar quem vende),
+  impressão de recibo, pagamento dividido (o modelo já suporta, a UI
+  ainda não).
+- `App`: novo ponto de entrada (`br.com.lojagenerica.pdvclient.App`) —
+  sem pareamento, abre só `TelaPareamento`; pareado, sobe todo o
+  backbone + `SyncScheduler` e mostra `VendaScreen`. Ainda não é o
+  `mainClass` do assembly (continua `mysquare.core.IMStart` até o corte
+  final).
 
-Falta ligar o backbone acima às telas de fato: tela de pareamento de
-terminal (cola a chave de API gerada pelo admin web), reescrever
-`Sale.java`→`VendaScreen` contra `cache_produto`/`VendaLocalDao` (cascata
-cor/peso do IMS sai, busca por nome/código/barras entra), deletar
-`Production.java`/`ModifyProducts.java`/`AdminSaas.java` (migram pro
-admin web), reescrever `Dispatch.java`→`AjusteEstoqueScreen`, adaptar
+### ⬜ Ainda falta
+
+Login de operador (identifica quem vende — destrava desconto e
+atribuição de venda), `Dispatch.java`→`AjusteEstoqueScreen`, adaptar
 `Stock.java`/`SalesReport.java`/`SalesCalendar.java`/`Receipt.java` pro
-schema local novo, repontar `MercadoPagoPixClient`/`PixPaymentDialog`
-(Pix é online-only por design — token nunca mais fica em arquivo texto na
-loja), `jpackage` pro instalador (ver plano completo, §6/§7). É um esforço
-de GUI desktop que não dá pra verificar visualmente nesta sessão (sem
-display) — cada tela deve ser tratada como sua própria fatia, comitada e
-revisada antes da próxima.
+schema local novo, deletar `Production.java`/`ModifyProducts.java`/
+`AdminSaas.java` (migram pro admin web), repontar
+`MercadoPagoPixClient`/`PixPaymentDialog` (Pix é online-only por design),
+`jpackage` pro instalador, cortar o `mainClass` do assembly pro `App`
+novo (ver plano completo, §6/§7). Cada tela deve continuar sendo tratada
+como sua própria fatia, comitada e revisada antes da próxima.
 
-**Saída (quando entrar)**: venda feita offline reflete no estoque local na
-hora, chega ao servidor depois de reconectar, reconexão no meio do envio
-não duplica a venda (já provado ponta a ponta no backbone; falta só a UI
-que chama `VendaLocalDao` de verdade).
+**Saída (parcial, já provada)**: venda feita offline reflete no estoque
+local na hora (espelho `venda_local`), enfileira o evento de sync na
+mesma transação, chega ao servidor depois de reconectar, reconexão no
+meio do envio não duplica a venda (`SyncSchedulerTest` prova isso ponta a
+ponta contra um servidor falso). Falta o teste manual num terminal de
+verdade, offline de propósito, pra fechar o critério de saída da fase.
 
 ## ⬜ Fase E — Financeiro
 
