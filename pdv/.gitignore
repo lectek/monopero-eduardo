@@ -14,6 +14,11 @@ target/
 ims_files/rbp.db
 ims_files/rbp.dp
 
+# Estado local do terminal PDV novo (chave de API + banco SQLite offline) — nunca versionar
+pdv-local.db
+pdv-local.db-*
+config.properties
+
 # Unused legacy artifacts — not required by the app (sqlite-jdbc bundles its
 # own native library at runtime); kept locally only if you use them manually
 # with a SQLite browser/CLI to edit the schema
