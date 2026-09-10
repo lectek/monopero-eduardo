@@ -39,6 +39,18 @@ class ProdutoCacheDaoTest {
     }
 
     @Test
+    void buscarPorCodigoExatoNaoCasaSubstring() throws Exception {
+        try (LocalDb db = new LocalDb(tempDir.resolve("pdv-local.db"))) {
+            ProdutoCacheDao dao = new ProdutoCacheDao(db);
+            dao.upsert(new ProdutoCache(1L, "Parafuso", "COD1", 10.0, 2L, true, "ATIVO", Instant.now()));
+            dao.upsert(new ProdutoCache(2L, "Porca", "COD10", 5.0, 2L, true, "ATIVO", Instant.now()));
+
+            ProdutoCache encontrado = dao.buscarPorCodigoExato("COD1");
+            assertThat(encontrado.id()).isEqualTo(1L);
+        }
+    }
+
+    @Test
     void buscarPorIdRetornaNullQuandoNaoExiste() throws Exception {
         try (LocalDb db = new LocalDb(tempDir.resolve("pdv-local.db"))) {
             ProdutoCacheDao dao = new ProdutoCacheDao(db);

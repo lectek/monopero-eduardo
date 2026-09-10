@@ -60,6 +60,18 @@ public final class ProdutoCacheDao {
         }
     }
 
+    /** Leitor de código de barras: um código bipado é sempre exato, nunca prefixo/substring. */
+    public ProdutoCache buscarPorCodigoExato(String codigo) throws SQLException {
+        synchronized (db.lock()) {
+            try (PreparedStatement ps = db.connection().prepareStatement(
+                    "SELECT * FROM cache_produto WHERE codigo_interno = ? LIMIT 1;")) {
+                ps.setString(1, codigo);
+                List<ProdutoCache> resultado = mapear(ps.executeQuery());
+                return resultado.isEmpty() ? null : resultado.get(0);
+            }
+        }
+    }
+
     public ProdutoCache buscarPorId(long id) throws SQLException {
         synchronized (db.lock()) {
             try (PreparedStatement ps = db.connection().prepareStatement("SELECT * FROM cache_produto WHERE id = ?;")) {
