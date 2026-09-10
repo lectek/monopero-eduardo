@@ -13,6 +13,7 @@ public record RegistrarVendaCommand(
         Long usuarioId,
         String usuarioEmail,
         BigDecimal descontoValor,
+        BigDecimal acrescimo,
         List<ItemVendaCommand> itens,
         List<PagamentoVendaCommand> pagamentos) {
 

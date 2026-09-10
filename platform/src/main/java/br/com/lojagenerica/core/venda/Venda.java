@@ -142,6 +142,11 @@ public class Venda {
         this.descontoValor = descontoValor != null ? descontoValor : BigDecimal.ZERO;
     }
 
+    /** Usado pelo checkout online pra embutir o frete no total (Venda não tem coluna própria de frete). */
+    public void aplicarAcrescimo(BigDecimal acrescimo) {
+        this.acrescimo = acrescimo != null ? acrescimo : BigDecimal.ZERO;
+    }
+
     public void marcarConfirmada() {
         this.status = StatusVenda.CONFIRMADA;
     }
@@ -162,6 +167,10 @@ public class Venda {
 
     public CanalVenda getCanal() {
         return canal;
+    }
+
+    public Instant getData() {
+        return data;
     }
 
     public Cliente getCliente() {

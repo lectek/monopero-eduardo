@@ -1,12 +1,14 @@
 package br.com.lojagenerica.adapters.inbound.web.controller;
 
 import br.com.lojagenerica.application.service.checkout.CheckoutService;
+import br.com.lojagenerica.core.cadastro.NaturezaFormaPagamento;
 import br.com.lojagenerica.domain.enums.ModoEntrega;
-import br.com.lojagenerica.domain.enums.TipoPagamento;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +35,7 @@ public class PublicCheckoutController {
                 body.customerEmail(),
                 body.customerTelefone(),
                 body.itens().stream()
-                        .map(i -> new CheckoutService.ItemCarrinho(i.nome(), i.cor(), i.peso(), i.quantidade()))
+                        .map(i -> new CheckoutService.ItemCarrinho(i.produtoId(), i.quantidade()))
                         .toList(),
                 body.modoEntrega(),
                 body.enderecoEntrega(),
@@ -53,10 +55,8 @@ public class PublicCheckoutController {
     }
 
     public record ItemCarrinhoRequest(
-            @NotBlank String nome,
-            String cor,
-            String peso,
-            int quantidade
+            @NotNull Long produtoId,
+            @NotNull @Positive BigDecimal quantidade
     ) {
     }
 
@@ -67,7 +67,7 @@ public class PublicCheckoutController {
             @NotEmpty List<@Valid ItemCarrinhoRequest> itens,
             @NotNull ModoEntrega modoEntrega,
             String enderecoEntrega,
-            @NotNull TipoPagamento tipoPagamento
+            @NotNull NaturezaFormaPagamento tipoPagamento
     ) {
     }
 

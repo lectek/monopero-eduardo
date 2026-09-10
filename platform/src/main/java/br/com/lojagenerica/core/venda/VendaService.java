@@ -29,15 +29,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * {@link #registrar} monta e confirma a venda numa chamada só (diferente de
- * {@code CompraService}, que mantém rascunho editável por várias
- * requisições) — é assim que um PDV/checkout real funciona: não faz
- * sentido uma venda "meio pronta" ficando pendurada. Idempotente pelo
- * {@code uuid} (gerado no cliente/terminal, ver Fase D) — como o método
- * inteiro é uma única transação, uma falha no meio do caminho desfaz tudo
- * (nunca deixa uma venda "confirmada pela metade"); uma segunda tentativa
- * com o mesmo uuid encontra a venda já commitada e a devolve sem repetir
- * nada.
+ * Dois ciclos de vida diferentes, por isso {@link #registrarPendente}/
+ * {@link #confirmarPagamento} são separados de {@link #registrar}:
+ * <ul>
+ *   <li>PDV/balcão ({@link #registrar}): monta e confirma numa chamada só
+ *   — não faz sentido uma venda de balcão "meio pronta" pendurada.</li>
+ *   <li>Checkout online ({@link #registrarPendente} + depois
+ *   {@link #confirmarPagamento}): cria a venda em RASCUNHO (carrinho vira
+ *   pedido, mas estoque só é baixado quando o Mercado Pago confirmar o
+ *   pagamento — minutos ou horas depois, via webhook. Ver CheckoutService.</li>
+ * </ul>
+ * Ambos idempotentes: {@code registrarPendente} por {@code uuid} (gerado no
+ * cliente/terminal), {@code confirmarPagamento} pelo status da venda + pelo
+ * índice único do ledger.
  */
 @Service
 public class VendaService {
@@ -68,16 +72,21 @@ public class VendaService {
         this.auditoriaService = auditoriaService;
     }
 
+    /** PDV/balcão: monta e confirma numa chamada só. */
     @Transactional
     public Venda registrar(RegistrarVendaCommand cmd) {
+        Venda pendente = registrarPendente(cmd);
+        return confirmarPagamento(pendente.getId());
+    }
+
+    /** Checkout online: monta a venda em RASCUNHO — sem tocar estoque ainda. */
+    @Transactional
+    public Venda registrarPendente(RegistrarVendaCommand cmd) {
         if (cmd.uuid() != null) {
             var existente = vendaRepository.findByUuid(cmd.uuid());
             if (existente.isPresent()) {
                 Venda venda = existente.get();
-                // Mesma armadilha de CompraService.confirmar(): força a
-                // inicialização das coleções lazy AQUI, com a sessão ainda
-                // aberta, senão o controller quebra (LazyInitializationException)
-                // ao serializar a resposta fora da transação.
+                // Ver nota de LazyInitializationException em confirmarPagamento().
                 venda.getItens().size();
                 venda.getPagamentos().size();
                 return venda;
@@ -112,6 +121,9 @@ public class VendaService {
 
         validarDesconto(cmd.descontoValor(), venda.getSubtotal(), cmd.usuarioEmail());
         venda.aplicarDesconto(cmd.descontoValor());
+        if (cmd.acrescimo() != null) {
+            venda.aplicarAcrescimo(cmd.acrescimo());
+        }
         venda.recalcularTotais();
 
         if (cmd.pagamentos() != null) {
@@ -122,13 +134,30 @@ public class VendaService {
             }
         }
 
-        venda = vendaRepository.save(venda);
+        return vendaRepository.save(venda);
+    }
+
+    /**
+     * Grava o ledger de saída + confirma. Idempotente pelo status: chamar
+     * de novo numa venda já CONFIRMADA é no-op (o índice único do ledger
+     * garante isso mesmo se algo aqui falhasse antes de checar o status).
+     */
+    @Transactional
+    public Venda confirmarPagamento(Long vendaId) {
+        Venda venda = vendaRepository.findByIdComItensEPagamentos(vendaId)
+                .orElseThrow(() -> new NoSuchElementException("Venda " + vendaId + " não encontrada"));
+        if (venda.getStatus() == StatusVenda.CONFIRMADA) {
+            return venda;
+        }
+        if (venda.getStatus() != StatusVenda.RASCUNHO) {
+            throw new IllegalStateException("Venda " + vendaId + " não está em rascunho (status atual: " + venda.getStatus() + ")");
+        }
 
         for (ItemVenda item : venda.getItens()) {
             movimentacaoEstoqueService.registrar(new RegistrarMovimentacaoCommand(
-                    item.getProduto().getId(), local.getId(), "VENDA", SentidoMovimentacao.SAIDA,
+                    item.getProduto().getId(), venda.getLocalEstoque().getId(), "VENDA", SentidoMovimentacao.SAIDA,
                     item.getQuantidade(), item.getUnidade().getId(), null,
-                    OrigemMovimentacao.VENDA, venda.getId(), item.getId(), cmd.terminalId(), cmd.usuarioId(), null));
+                    OrigemMovimentacao.VENDA, venda.getId(), item.getId(), null, venda.getUsuarioId(), null));
         }
 
         venda.marcarConfirmada();
@@ -136,10 +165,11 @@ public class VendaService {
     }
 
     /**
-     * Idempotente: cancelar uma venda já cancelada é no-op. Reverte estoque
-     * via movimentação de entrada (origem DEVOLUCAO, não colide com o
-     * índice único da movimentação de saída original — ver
-     * MovimentacaoEstoqueService).
+     * Idempotente: cancelar uma venda já cancelada é no-op. Um RASCUNHO
+     * (carrinho online que nunca foi pago) cancela direto, sem ledger —
+     * estoque nunca foi tocado. Uma CONFIRMADA reverte via movimentação de
+     * entrada (origem DEVOLUCAO, não colide com o índice único da saída
+     * original).
      */
     @Transactional
     public Venda cancelar(Long vendaId, String motivo, Long usuarioId) {
@@ -148,22 +178,21 @@ public class VendaService {
         if (venda.getStatus() == StatusVenda.CANCELADA) {
             return venda;
         }
-        if (venda.getStatus() != StatusVenda.CONFIRMADA) {
-            throw new IllegalStateException("Venda " + vendaId + " não está confirmada (status atual: " + venda.getStatus() + ")");
-        }
 
-        for (ItemVenda item : venda.getItens()) {
-            movimentacaoEstoqueService.registrar(new RegistrarMovimentacaoCommand(
-                    item.getProduto().getId(), venda.getLocalEstoque().getId(), "DEVOLUCAO_CLIENTE",
-                    SentidoMovimentacao.ENTRADA, item.getQuantidade(), item.getUnidade().getId(), null,
-                    OrigemMovimentacao.DEVOLUCAO, venda.getId(), item.getId(), null, usuarioId, motivo));
+        if (venda.getStatus() == StatusVenda.CONFIRMADA) {
+            for (ItemVenda item : venda.getItens()) {
+                movimentacaoEstoqueService.registrar(new RegistrarMovimentacaoCommand(
+                        item.getProduto().getId(), venda.getLocalEstoque().getId(), "DEVOLUCAO_CLIENTE",
+                        SentidoMovimentacao.ENTRADA, item.getQuantidade(), item.getUnidade().getId(), null,
+                        OrigemMovimentacao.DEVOLUCAO, venda.getId(), item.getId(), null, usuarioId, motivo));
+            }
         }
 
         venda.cancelar(motivo);
         venda = vendaRepository.save(venda);
 
         auditoriaService.registrar(EventoAuditoria.de("VENDA_CANCELADA", "venda", venda.getId(),
-                Map.of("status", StatusVenda.CONFIRMADA.name()),
+                Map.of("status", venda.getStatus().name()),
                 Map.of("status", StatusVenda.CANCELADA.name()), motivo));
 
         return venda;

@@ -2,7 +2,6 @@ package br.com.lojagenerica.adapters.inbound.web.controller.mvc;
 
 import br.com.lojagenerica.adapters.outbound.persistence.entity.CustomerEntity;
 import br.com.lojagenerica.adapters.outbound.persistence.repository.CustomerRepository;
-import br.com.lojagenerica.adapters.outbound.persistence.repository.PedidoRepository;
 import br.com.lojagenerica.application.service.customer.CustomerAuthService;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
@@ -20,18 +19,15 @@ public class CustomerAuthController {
 
     private final CustomerAuthService customerAuthService;
     private final CustomerRepository customerRepository;
-    private final PedidoRepository pedidoRepository;
     private final Environment environment;
 
     public CustomerAuthController(
             CustomerAuthService customerAuthService,
             CustomerRepository customerRepository,
-            PedidoRepository pedidoRepository,
             Environment environment
     ) {
         this.customerAuthService = customerAuthService;
         this.customerRepository = customerRepository;
-        this.pedidoRepository = pedidoRepository;
         this.environment = environment;
     }
 
@@ -83,7 +79,8 @@ public class CustomerAuthController {
         CustomerEntity cliente = customerRepository.findByEmailIgnoreCase(authentication.getName())
                 .orElseThrow(() -> new IllegalStateException("Cliente autenticado não encontrado: " + authentication.getName()));
         model.addAttribute("cliente", cliente);
-        model.addAttribute("pedidos", pedidoRepository.listarPorClienteComItensOrderByDataDesc(cliente.getId()));
+        // TODO: histórico de pedidos — precisa correlacionar CustomerEntity (login)
+        // com core.parceiro.Cliente (comercial); ver docs/ROADMAP.md.
         return "pages/cliente/conta";
     }
 }

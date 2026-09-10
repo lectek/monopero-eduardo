@@ -1,13 +1,10 @@
 package br.com.lojagenerica.adapters.inbound.web.controller.admin;
 
-import br.com.lojagenerica.adapters.outbound.persistence.entity.PedidoEntity;
-import br.com.lojagenerica.adapters.outbound.persistence.repository.PedidoRepository;
 import br.com.lojagenerica.application.service.checkout.CheckoutService;
-import br.com.lojagenerica.domain.enums.ModoEntrega;
-import br.com.lojagenerica.domain.enums.StatusPedido;
-import br.com.lojagenerica.domain.enums.TipoPagamento;
+import br.com.lojagenerica.core.venda.Venda;
+import br.com.lojagenerica.core.venda.VendaRepository;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -17,41 +14,40 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Painel admin do canal ONLINE — reescrito na Fase C sobre {@link Venda}
+ * (era {@code PedidoEntity}). Vendas de PDV/balcão já aparecem no
+ * {@code VendaController} genérico; este endpoint é específico do fluxo
+ * de checkout do site (confirmar dinheiro recebido).
+ */
 @RestController
 @RequestMapping("/api/admin/pedidos")
 public class AdminPedidoController {
 
     private final CheckoutService checkoutService;
-    private final PedidoRepository pedidoRepository;
+    private final VendaRepository vendaRepository;
 
-    public AdminPedidoController(CheckoutService checkoutService, PedidoRepository pedidoRepository) {
+    public AdminPedidoController(CheckoutService checkoutService, VendaRepository vendaRepository) {
         this.checkoutService = checkoutService;
-        this.pedidoRepository = pedidoRepository;
+        this.vendaRepository = vendaRepository;
     }
 
-    public record PedidoResumo(
-            Long id,
-            LocalDateTime data,
-            String clienteNome,
-            String clienteEmail,
-            BigDecimal total,
-            StatusPedido status,
-            TipoPagamento tipoPagamento,
-            ModoEntrega modoEntrega
-    ) {
-        static PedidoResumo de(PedidoEntity p) {
+    public record PedidoResumo(Long id, Instant data, String clienteNome, String clienteEmail,
+                                BigDecimal total, String status, String canal) {
+        static PedidoResumo de(Venda v) {
             return new PedidoResumo(
-                    p.getId(), p.getData(),
-                    p.getCliente().getNome(), p.getCliente().getEmail(),
-                    p.getTotal(), p.getStatus(), p.getTipoPagamento(), p.getModoEntrega()
+                    v.getId(), v.getData(),
+                    v.getCliente() != null ? v.getCliente().getNome() : null,
+                    v.getCliente() != null ? v.getCliente().getEmail() : null,
+                    v.getTotal(), v.getStatus().name(), v.getCanal().name()
             );
         }
     }
 
-    /** Painel admin: últimos 200 pedidos, mais recentes primeiro. */
+    /** Painel admin: últimos 200 pedidos online, mais recentes primeiro. */
     @GetMapping
     public List<PedidoResumo> listar() {
-        return pedidoRepository.listarTodosComClienteOrderByDataDesc(PageRequest.of(0, 200))
+        return vendaRepository.findAll(PageRequest.of(0, 200))
                 .stream().map(PedidoResumo::de).toList();
     }
 

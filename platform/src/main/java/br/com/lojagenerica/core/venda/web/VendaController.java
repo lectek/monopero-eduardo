@@ -55,7 +55,7 @@ public class VendaController {
         Venda venda = vendaService.registrar(new RegistrarVendaCommand(
                 request.uuid() != null ? request.uuid() : UUID.randomUUID(),
                 request.canal(), request.localEstoqueId(), request.clienteId(), request.terminalId(),
-                usuarioId, email, request.descontoValor(),
+                usuarioId, email, request.descontoValor(), null,
                 request.itens().stream().map(i -> new RegistrarVendaCommand.ItemVendaCommand(
                         i.produtoId(), i.quantidade(), i.unidadeId(), i.precoUnitario(), i.descontoValor())).toList(),
                 request.pagamentos() == null ? List.of() : request.pagamentos().stream()

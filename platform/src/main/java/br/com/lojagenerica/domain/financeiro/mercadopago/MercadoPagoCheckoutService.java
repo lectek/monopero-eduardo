@@ -1,15 +1,16 @@
 package br.com.lojagenerica.domain.financeiro.mercadopago;
 
-import br.com.lojagenerica.adapters.outbound.persistence.entity.CustomerEntity;
-import br.com.lojagenerica.adapters.outbound.persistence.entity.ItemPedidoEntity;
-import br.com.lojagenerica.adapters.outbound.persistence.entity.PedidoEntity;
-import br.com.lojagenerica.adapters.outbound.persistence.repository.PedidoRepository;
 import br.com.lojagenerica.application.core.settings.AppSettingService;
-import br.com.lojagenerica.domain.enums.StatusPedido;
-import br.com.lojagenerica.domain.enums.TipoPagamento;
+import br.com.lojagenerica.core.parceiro.Cliente;
+import br.com.lojagenerica.core.venda.ItemVenda;
+import br.com.lojagenerica.core.venda.TipoPagamentoOnline;
+import br.com.lojagenerica.core.venda.Venda;
+import br.com.lojagenerica.core.venda.VendaPagamentoGateway;
+import br.com.lojagenerica.core.venda.VendaPagamentoGatewayRepository;
+import br.com.lojagenerica.core.venda.VendaService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,15 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Adaptado do MercadoPagoCheckoutService do ParaisoPet: a lógica de negócio
- * (criar Pix/preferência, aplicar status de pagamento no pedido, checar
- * elegibilidade) é a mesma. A diferença real é a resolução do token: o
- * original resolve um {@code accessToken} por "owner reference" via OAuth
- * (modelo marketplace multi-vendedor, com {@code MercadoPagoOAuthService} e
- * uma tabela de conexões por tenant) — não portado aqui, porque este SaaS é
- * de uma loja só. Em vez disso, usamos um único token estático (mesma ideia
- * do {@code MP_ACCESS_TOKEN} que o IMS já usa em produção — dá pra
- * reaproveitar a mesma credencial).
+ * Reescrito na Fase C pra operar sobre {@link Venda}+{@link VendaPagamentoGateway}
+ * em vez de {@code PedidoEntity} — a lógica de negócio (criar Pix/preferência,
+ * checar elegibilidade, aplicar status de pagamento) é a mesma herdada do
+ * ParaisoPet/versão anterior deste arquivo; só o agregado mudou. Único token
+ * estático (mesma ideia do {@code MP_ACCESS_TOKEN} que o IMS já usa) — este
+ * SaaS ainda é de 1 tenant por processo, sem resolução de token por vendedor.
  */
 @Service
 public class MercadoPagoCheckoutService {
@@ -39,24 +37,25 @@ public class MercadoPagoCheckoutService {
     public static final String KEY_ACCESS_TOKEN = "pg.mp.access_token";
     public static final String KEY_WEBHOOK_URL = "pg.webhook_url";
     private static final String PAYMENT_STATUS_APPROVED = "approved";
-    private static final String PAYMENT_STATUS_PENDING = "pending";
-    private static final String PAYMENT_STATUS_IN_PROCESS = "in_process";
     private static final String PIX_PAYMENT_METHOD = "pix";
     private static final String PIX_PAYMENT_TYPE = "bank_transfer";
 
     private final AppSettingService settings;
-    private final PedidoRepository pedidoRepository;
+    private final VendaPagamentoGatewayRepository gatewayRepository;
+    private final VendaService vendaService;
     private final MercadoPagoCheckoutClient checkoutClient;
     private final String appBaseUrl;
 
     public MercadoPagoCheckoutService(
             final AppSettingService settingsValue,
-            final PedidoRepository pedidoRepositoryValue,
+            final VendaPagamentoGatewayRepository gatewayRepositoryValue,
+            final VendaService vendaServiceValue,
             final MercadoPagoCheckoutClient checkoutClientValue,
             @Value("${app.web.base-url:http://localhost:8080}") final String appBaseUrlValue
     ) {
         this.settings = settingsValue;
-        this.pedidoRepository = pedidoRepositoryValue;
+        this.gatewayRepository = gatewayRepositoryValue;
+        this.vendaService = vendaServiceValue;
         this.checkoutClient = checkoutClientValue;
         this.appBaseUrl = appBaseUrlValue;
     }
@@ -71,62 +70,60 @@ public class MercadoPagoCheckoutService {
     }
 
     @Transactional
-    public Optional<CheckoutPreferenceResult> ensureCheckoutForPedido(final PedidoEntity pedido) {
-        if (!isEligibleOnlineOrder(pedido) || !isPendingPaymentStatus(pedido)) {
+    public Optional<CheckoutPreferenceResult> ensureCheckoutForVenda(final Venda venda, final VendaPagamentoGateway gateway) {
+        if (!isPendingPaymentStatus(venda)) {
             return Optional.empty();
         }
-        if (isPixOrder(pedido)) {
-            if (hasPixPresentation(pedido)) {
-                return Optional.of(buildCheckoutResultFromPedido(pedido));
+        if (isPixOrder(gateway)) {
+            if (hasPixPresentation(gateway)) {
+                return Optional.of(buildCheckoutResultFromGateway(gateway));
             }
-            if (!text(pedido.getGatewayPaymentId()).isBlank()) {
+            if (!text(gateway.getPaymentId()).isBlank()) {
                 try {
-                    syncPaymentForPedido(pedido, pedido.getGatewayPaymentId());
+                    syncPayment(venda, gateway, gateway.getPaymentId());
                 } catch (IllegalStateException ignored) {
                     // Mantém o pagamento atual e deixa a página renderizar.
                 }
-                return Optional.of(buildCheckoutResultFromPedido(pedido));
+                return Optional.of(buildCheckoutResultFromGateway(gateway));
             }
-        } else if (!text(pedido.getGatewayCheckoutUrl()).isBlank()) {
-            return Optional.of(buildCheckoutResultFromPedido(pedido));
+        } else if (!text(gateway.getCheckoutUrl()).isBlank()) {
+            return Optional.of(buildCheckoutResultFromGateway(gateway));
         }
-        return Optional.of(createCheckoutForPedido(pedido, CheckoutRequest.fromCustomer(pedido.getCliente())));
+        return Optional.of(createCheckout(venda, gateway, CheckoutRequest.fromCliente(venda.getCliente())));
     }
 
     @Transactional
-    public CheckoutPreferenceResult createCheckoutForPedido(final PedidoEntity pedido, final CheckoutRequest checkoutRequest) {
-        if (!isEligibleOnlineOrder(pedido)) {
-            throw new IllegalArgumentException("O pedido nao esta apto para checkout online.");
-        }
-        if (!isPendingPaymentStatus(pedido)) {
-            throw new IllegalArgumentException("O pedido nao esta aguardando pagamento online.");
+    public CheckoutPreferenceResult createCheckout(final Venda venda, final VendaPagamentoGateway gateway,
+                                                    final CheckoutRequest checkoutRequest) {
+        if (!isPendingPaymentStatus(venda)) {
+            throw new IllegalArgumentException("A venda nao esta aguardando pagamento online.");
         }
 
         final String accessToken = requireAccessToken();
-        final String externalReference = resolveExternalReference(pedido);
-        final String detailUrl = buildOrderDetailUrl(pedido.getId());
+        final String externalReference = resolveExternalReference(venda, gateway);
+        final String detailUrl = buildOrderDetailUrl(venda.getId());
         final String notificationUrl = resolveNotificationUrl();
 
-        pedido.setGatewayProvider(PROVIDER_NAME);
-        pedido.setGatewayExternalReference(externalReference);
-        pedidoRepository.save(pedido);
+        gateway.setProvider(PROVIDER_NAME);
+        gateway.setExternalReference(externalReference);
+        gatewayRepository.save(gateway);
 
-        if (isPixOrder(pedido)) {
+        if (gateway.getTipoPagamentoOnline() == TipoPagamentoOnline.PIX) {
             final MercadoPagoCheckoutClient.PaymentResponse payment = checkoutClient.createPixPayment(
                     accessToken,
                     new MercadoPagoCheckoutClient.PixPaymentRequest(
                             externalReference,
                             notificationUrl,
-                            buildPixDescription(pedido),
-                            safeTransactionAmount(pedido),
-                            buildPayer(checkoutRequest, pedido),
+                            buildPixDescription(venda),
+                            safeTransactionAmount(venda),
+                            buildPayer(checkoutRequest, venda),
                             buildPixIdempotencyKey(externalReference)
                     )
             );
-            applyPaymentToPedido(pedido, payment);
-            pedido.setGatewayPreferenceId(null);
-            pedidoRepository.save(pedido);
-            return buildCheckoutResultFromPedido(pedido);
+            applyPaymentToGateway(venda, gateway, payment);
+            gateway.setPreferenceId(null);
+            gatewayRepository.save(gateway);
+            return buildCheckoutResultFromGateway(gateway);
         }
 
         final MercadoPagoCheckoutClient.PreferenceResponse response = checkoutClient.createPreference(
@@ -137,7 +134,7 @@ public class MercadoPagoCheckoutService {
                         detailUrl,
                         detailUrl,
                         detailUrl,
-                        buildPreferenceItems(pedido),
+                        buildPreferenceItems(venda),
                         new MercadoPagoCheckoutClient.PreferencePayer(
                                 checkoutRequest.payerName(),
                                 checkoutRequest.payerEmail(),
@@ -146,74 +143,42 @@ public class MercadoPagoCheckoutService {
                 )
         );
 
-        pedido.setGatewayPreferenceId(response.preferenceId());
-        pedido.setGatewayCheckoutUrl(firstNonBlank(response.initPoint(), response.sandboxInitPoint()));
-        pedido.setGatewayPaymentTicketUrl(null);
-        pedido.setGatewayPixQrCode(null);
-        pedido.setGatewayPixQrCodeBase64(null);
-        pedidoRepository.save(pedido);
+        gateway.setPreferenceId(response.preferenceId());
+        gateway.setCheckoutUrl(firstNonBlank(response.initPoint(), response.sandboxInitPoint()));
+        gateway.setPaymentTicketUrl(null);
+        gateway.setPixQrCode(null);
+        gateway.setPixQrCodeBase64(null);
+        gatewayRepository.save(gateway);
 
-        return buildCheckoutResultFromPedido(pedido);
+        return buildCheckoutResultFromGateway(gateway);
     }
 
     @Transactional
-    public PaymentSyncResult syncPaymentForPedido(final PedidoEntity pedido, final String paymentId) {
-        if (pedido == null || text(paymentId).isBlank()) {
+    public PaymentSyncResult syncPayment(final Venda venda, final VendaPagamentoGateway gateway, final String paymentId) {
+        if (venda == null || text(paymentId).isBlank()) {
             return PaymentSyncResult.ignored();
         }
         final MercadoPagoCheckoutClient.PaymentResponse payment = checkoutClient.fetchPayment(requireAccessToken(), paymentId);
-        applyPaymentToPedido(pedido, payment);
-        pedidoRepository.save(pedido);
-        return PaymentSyncResult.updated(pedido.getId(), payment.paymentId(), payment.status());
+        applyPaymentToGateway(venda, gateway, payment);
+        gatewayRepository.save(gateway);
+        return PaymentSyncResult.updated(venda.getId(), payment.paymentId(), payment.status());
     }
 
-    /** Webhook do Mercado Pago: como só existe um token/loja, não precisa resolver "vendedor" — busca o pagamento direto. */
+    /** Webhook do Mercado Pago: como só existe um token/loja, busca o pagamento direto, sem resolver "vendedor". */
     @Transactional
     public PaymentSyncResult handleWebhookNotification(final String type, final String topic, final String paymentId) {
         if (!isPaymentNotification(type, topic) || text(paymentId).isBlank()) {
             return PaymentSyncResult.ignored();
         }
         final MercadoPagoCheckoutClient.PaymentResponse payment = checkoutClient.fetchPayment(requireAccessToken(), paymentId);
-        final PedidoEntity pedido = resolvePedidoForPayment(payment);
-        if (pedido == null) {
+        final VendaPagamentoGateway gateway = resolveGatewayForPayment(payment);
+        if (gateway == null) {
             return PaymentSyncResult.ignored();
         }
-        applyPaymentToPedido(pedido, payment);
-        pedidoRepository.save(pedido);
-        return PaymentSyncResult.updated(pedido.getId(), payment.paymentId(), payment.status());
-    }
-
-    public boolean canPayOnline(final PedidoEntity pedido) {
-        return pedido != null
-                && isPendingPaymentStatus(pedido)
-                && PROVIDER_NAME.equalsIgnoreCase(text(pedido.getGatewayProvider()));
-    }
-
-    public boolean hasPaymentAction(final PedidoEntity pedido) {
-        return canPayOnline(pedido) && (!text(pedido.getGatewayCheckoutUrl()).isBlank() || hasPixPresentation(pedido));
-    }
-
-    public boolean hasPixPayload(final PedidoEntity pedido) {
-        return pedido != null && isPixOrder(pedido) && hasPixPresentation(pedido);
-    }
-
-    public String resolvePaymentStatusLabel(final PedidoEntity pedido) {
-        if (pedido == null) {
-            return "";
-        }
-        final String paymentStatus = text(pedido.getGatewayPaymentStatus()).toLowerCase(Locale.ROOT);
-        if (paymentStatus.isBlank() && isPendingPaymentStatus(pedido) && PROVIDER_NAME.equalsIgnoreCase(text(pedido.getGatewayProvider()))) {
-            return isPixOrder(pedido) ? "Aguardando pagamento Pix" : "Aguardando pagamento online";
-        }
-        return switch (paymentStatus) {
-            case PAYMENT_STATUS_APPROVED -> "Pagamento aprovado";
-            case PAYMENT_STATUS_PENDING -> isPixOrder(pedido) ? "Aguardando pagamento Pix" : "Pagamento pendente";
-            case PAYMENT_STATUS_IN_PROCESS -> "Pagamento em analise";
-            case "rejected" -> "Pagamento recusado";
-            case "cancelled" -> "Pagamento cancelado";
-            case "refunded" -> "Pagamento estornado";
-            default -> paymentStatus.isBlank() ? "" : paymentStatus;
-        };
+        final Venda venda = gateway.getVenda();
+        applyPaymentToGateway(venda, gateway, payment);
+        gatewayRepository.save(gateway);
+        return PaymentSyncResult.updated(venda.getId(), payment.paymentId(), payment.status());
     }
 
     public boolean hasNotificationUrlConfigured() {
@@ -237,98 +202,92 @@ public class MercadoPagoCheckoutService {
         return token;
     }
 
-    private PedidoEntity resolvePedidoForPayment(final MercadoPagoCheckoutClient.PaymentResponse payment) {
+    private VendaPagamentoGateway resolveGatewayForPayment(final MercadoPagoCheckoutClient.PaymentResponse payment) {
         final String paymentId = text(payment.paymentId());
         if (!paymentId.isBlank()) {
-            final Optional<PedidoEntity> byPaymentId = pedidoRepository.findByGatewayPaymentId(paymentId);
+            final Optional<VendaPagamentoGateway> byPaymentId = gatewayRepository.findByPaymentId(paymentId);
             if (byPaymentId.isPresent()) {
                 return byPaymentId.get();
             }
         }
         final String externalReference = text(payment.externalReference());
         if (!externalReference.isBlank()) {
-            return pedidoRepository.findByGatewayExternalReference(externalReference).orElse(null);
+            return gatewayRepository.findByExternalReference(externalReference).orElse(null);
         }
         return null;
     }
 
-    private void applyPaymentToPedido(final PedidoEntity pedido, final MercadoPagoCheckoutClient.PaymentResponse payment) {
-        pedido.setGatewayProvider(PROVIDER_NAME);
-        pedido.setGatewayPaymentId(payment.paymentId());
-        pedido.setGatewayExternalReference(firstNonBlank(payment.externalReference(), pedido.getGatewayExternalReference()));
-        pedido.setGatewayPaymentStatus(payment.status());
-        pedido.setGatewayPaymentStatusDetail(payment.statusDetail());
-        pedido.setGatewayPaymentUpdatedAt(toLocalDateTime(payment.updatedAt()));
-        pedido.setGatewayPaymentTicketUrl(payment.ticketUrl());
-        pedido.setGatewayPixQrCode(payment.qrCode());
-        pedido.setGatewayPixQrCodeBase64(payment.qrCodeBase64());
-        if (isPixOrder(pedido)) {
-            pedido.setGatewayCheckoutUrl(firstNonBlank(payment.ticketUrl(), pedido.getGatewayCheckoutUrl()));
+    /**
+     * Efeito colateral importante: pagamento aprovado dispara
+     * {@link VendaService#confirmarPagamento} (grava o ledger de saída),
+     * recusado/cancelado dispara {@link VendaService#cancelar} — a venda
+     * ainda em RASCUNHO cancela sem tocar estoque (nunca foi confirmada).
+     */
+    private void applyPaymentToGateway(final Venda venda, final VendaPagamentoGateway gateway,
+                                        final MercadoPagoCheckoutClient.PaymentResponse payment) {
+        gateway.setProvider(PROVIDER_NAME);
+        gateway.setPaymentId(payment.paymentId());
+        gateway.setExternalReference(firstNonBlank(payment.externalReference(), gateway.getExternalReference()));
+        gateway.setPaymentStatus(payment.status());
+        gateway.setPaymentStatusDetail(payment.statusDetail());
+        gateway.setPaymentUpdatedAt(toInstant(payment.updatedAt()));
+        gateway.setPaymentTicketUrl(payment.ticketUrl());
+        gateway.setPixQrCode(payment.qrCode());
+        gateway.setPixQrCodeBase64(payment.qrCodeBase64());
+        if (gateway.getTipoPagamentoOnline() == TipoPagamentoOnline.PIX) {
+            gateway.setCheckoutUrl(firstNonBlank(payment.ticketUrl(), gateway.getCheckoutUrl()));
         }
-        pedido.setFormaPagamentoRecebida(buildReceivedPaymentLabel(payment));
-        pedido.setPagamentoDivergente(isPaymentMethodDivergent(pedido, payment));
+        gateway.setFormaPagamentoRecebida(buildReceivedPaymentLabel(payment));
+        gateway.setPagamentoDivergente(isPaymentMethodDivergent(gateway, payment));
 
         final String status = text(payment.status()).toLowerCase(Locale.ROOT);
         if (PAYMENT_STATUS_APPROVED.equals(status)) {
-            if (pedido.getStatus() == StatusPedido.AGUARDANDO_PAGAMENTO || pedido.getStatus() == StatusPedido.ABERTO) {
-                pedido.setStatus(StatusPedido.PAGO);
+            if (gateway.getPagamentoRecebidoEm() == null) {
+                gateway.setPagamentoRecebidoEm(firstNonNull(toInstant(payment.approvedAt()), Instant.now()));
             }
-            if (pedido.getPagamentoRecebidoEm() == null) {
-                pedido.setPagamentoRecebidoEm(firstNonNull(toLocalDateTime(payment.approvedAt()), LocalDateTime.now()));
-            }
+            vendaService.confirmarPagamento(venda.getId());
             return;
         }
-
-        if ((PAYMENT_STATUS_PENDING.equals(status) || PAYMENT_STATUS_IN_PROCESS.equals(status)) && pedido.getStatus() == StatusPedido.ABERTO) {
-            pedido.setStatus(StatusPedido.AGUARDANDO_PAGAMENTO);
-            return;
+        if ("rejected".equals(status) || "cancelled".equals(status)) {
+            vendaService.cancelar(venda.getId(), "Pagamento " + status + " no Mercado Pago", null);
         }
-
-        if (("rejected".equals(status) || "cancelled".equals(status)) && pedido.getStatus() == StatusPedido.AGUARDANDO_PAGAMENTO) {
-            pedido.setStatus(StatusPedido.CANCELADO);
-        }
+        // pending/in_process: venda continua em RASCUNHO, nada a mudar nela.
     }
 
-    /** Adaptado: usa o snapshot por nome/cor/peso do ItemPedidoEntity (sem ProdutoEntity com ID numérico). */
-    private List<MercadoPagoCheckoutClient.PreferenceItem> buildPreferenceItems(final PedidoEntity pedido) {
+    private List<MercadoPagoCheckoutClient.PreferenceItem> buildPreferenceItems(final Venda venda) {
         final List<MercadoPagoCheckoutClient.PreferenceItem> items = new ArrayList<>();
         BigDecimal itemsTotal = BigDecimal.ZERO;
-        if (pedido.getItens() != null) {
-            for (ItemPedidoEntity item : pedido.getItens()) {
-                if (item == null) {
-                    continue;
-                }
-                final String title = text(item.getProdutoNome());
-                final BigDecimal unitPrice = item.getPrecoUnitario() == null ? BigDecimal.ZERO : item.getPrecoUnitario();
-                final int quantity = item.getQuantidade() == null ? 1 : Math.max(item.getQuantidade(), 1);
-                items.add(new MercadoPagoCheckoutClient.PreferenceItem(
-                        firstNonBlank(item.getProdutoCodigoBarras(), "item-" + (items.size() + 1)),
-                        title.isBlank() ? "Item do pedido" : title,
-                        quantity,
-                        unitPrice,
-                        "BRL"
-                ));
-                itemsTotal = itemsTotal.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
-            }
+        for (ItemVenda item : venda.getItens()) {
+            final String title = text(item.getDescricaoSnapshot());
+            final BigDecimal unitPrice = item.getPrecoUnitario() == null ? BigDecimal.ZERO : item.getPrecoUnitario();
+            final int quantity = Math.max(item.getQuantidade().intValue(), 1);
+            items.add(new MercadoPagoCheckoutClient.PreferenceItem(
+                    firstNonBlank(item.getId() == null ? "" : String.valueOf(item.getId()), "item-" + (items.size() + 1)),
+                    title.isBlank() ? "Item da venda" : title,
+                    quantity,
+                    unitPrice,
+                    "BRL"
+            ));
+            itemsTotal = itemsTotal.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
         }
 
-        final BigDecimal orderTotal = pedido.getTotal() == null ? BigDecimal.ZERO : pedido.getTotal();
+        final BigDecimal orderTotal = venda.getTotal() == null ? BigDecimal.ZERO : venda.getTotal();
         final BigDecimal difference = orderTotal.subtract(itemsTotal);
         if (difference.compareTo(BigDecimal.ZERO) > 0) {
-            items.add(new MercadoPagoCheckoutClient.PreferenceItem("pedido-frete", "Frete do pedido", 1, difference, "BRL"));
+            items.add(new MercadoPagoCheckoutClient.PreferenceItem("venda-frete", "Frete", 1, difference, "BRL"));
         }
         if (items.isEmpty()) {
-            items.add(new MercadoPagoCheckoutClient.PreferenceItem("pedido-" + pedido.getId(), "Pedido #" + pedido.getId(), 1, orderTotal, "BRL"));
+            items.add(new MercadoPagoCheckoutClient.PreferenceItem("venda-" + venda.getId(), "Venda #" + venda.getId(), 1, orderTotal, "BRL"));
         }
         return items;
     }
 
-    private String resolveExternalReference(final PedidoEntity pedido) {
-        final String current = text(pedido.getGatewayExternalReference());
+    private String resolveExternalReference(final Venda venda, final VendaPagamentoGateway gateway) {
+        final String current = text(gateway.getExternalReference());
         if (!current.isBlank()) {
             return current;
         }
-        return "pedido:" + pedido.getId();
+        return "venda:" + venda.getId();
     }
 
     private String resolveNotificationUrl() {
@@ -343,21 +302,11 @@ public class MercadoPagoCheckoutService {
         return normalizedBaseUrl + "/webhooks/mercadopago";
     }
 
-    private String buildOrderDetailUrl(final Long pedidoId) {
+    private String buildOrderDetailUrl(final Long vendaId) {
         return UriComponentsBuilder.fromUriString(normalizeBaseUrl(appBaseUrl))
                 .path("/cliente/pedidos/{id}")
-                .buildAndExpand(pedidoId)
+                .buildAndExpand(vendaId)
                 .toUriString();
-    }
-
-    private boolean isEligibleOnlineOrder(final PedidoEntity pedido) {
-        if (pedido == null || pedido.getId() == null || pedido.getTipoPagamento() == null) {
-            return false;
-        }
-        return switch (pedido.getTipoPagamento()) {
-            case PIX, BOLETO, CARTAO_CREDITO, CARTAO_DEBITO -> true;
-            default -> false;
-        };
     }
 
     private boolean isPaymentNotification(final String type, final String topic) {
@@ -367,18 +316,17 @@ public class MercadoPagoCheckoutService {
                 || normalizedType.startsWith("payment.") || normalizedTopic.startsWith("payment.");
     }
 
-    private boolean isPaymentMethodDivergent(final PedidoEntity pedido, final MercadoPagoCheckoutClient.PaymentResponse payment) {
+    private boolean isPaymentMethodDivergent(final VendaPagamentoGateway gateway, final MercadoPagoCheckoutClient.PaymentResponse payment) {
         final String paymentType = text(payment.paymentTypeId()).toLowerCase(Locale.ROOT);
         final String paymentMethod = text(payment.paymentMethodId()).toLowerCase(Locale.ROOT);
         if (paymentType.isBlank() && paymentMethod.isBlank()) {
             return false;
         }
-        return switch (pedido.getTipoPagamento()) {
+        return switch (gateway.getTipoPagamentoOnline()) {
             case PIX -> !PIX_PAYMENT_METHOD.equals(paymentMethod) && !PIX_PAYMENT_TYPE.equals(paymentType);
             case BOLETO -> !"ticket".equals(paymentType);
             case CARTAO_CREDITO -> !"credit_card".equals(paymentType);
             case CARTAO_DEBITO -> !"debit_card".equals(paymentType);
-            default -> false;
         };
     }
 
@@ -399,14 +347,14 @@ public class MercadoPagoCheckoutService {
         return normalized.endsWith("/") ? normalized.substring(0, normalized.length() - 1) : normalized;
     }
 
-    private boolean isPendingPaymentStatus(final PedidoEntity pedido) {
-        return pedido != null && (pedido.getStatus() == StatusPedido.AGUARDANDO_PAGAMENTO || pedido.getStatus() == StatusPedido.ABERTO);
+    private boolean isPendingPaymentStatus(final Venda venda) {
+        return venda != null && venda.getStatus() == br.com.lojagenerica.core.venda.StatusVenda.RASCUNHO;
     }
 
-    private MercadoPagoCheckoutClient.PreferencePayer buildPayer(final CheckoutRequest checkoutRequest, final PedidoEntity pedido) {
+    private MercadoPagoCheckoutClient.PreferencePayer buildPayer(final CheckoutRequest checkoutRequest, final Venda venda) {
         final String payerEmail = firstNonBlank(
                 checkoutRequest == null ? "" : checkoutRequest.payerEmail(),
-                pedido != null && pedido.getCliente() != null ? pedido.getCliente().getEmail() : ""
+                venda != null && venda.getCliente() != null ? venda.getCliente().getEmail() : ""
         );
         if (text(payerEmail).isBlank()) {
             throw new IllegalStateException("Informe um e-mail valido para gerar o Pix do Mercado Pago.");
@@ -414,44 +362,44 @@ public class MercadoPagoCheckoutService {
         return new MercadoPagoCheckoutClient.PreferencePayer(
                 firstNonBlank(
                         checkoutRequest == null ? "" : checkoutRequest.payerName(),
-                        pedido != null && pedido.getCliente() != null ? pedido.getCliente().getNome() : ""
+                        venda != null && venda.getCliente() != null ? venda.getCliente().getNome() : ""
                 ),
                 payerEmail,
                 normalizeCpf(firstNonBlank(
                         checkoutRequest == null ? "" : checkoutRequest.payerCpf(),
-                        pedido != null && pedido.getCliente() != null ? pedido.getCliente().getCpf() : ""
+                        venda != null && venda.getCliente() != null ? venda.getCliente().getDocumento() : ""
                 ))
         );
     }
 
-    private boolean isPixOrder(final PedidoEntity pedido) {
-        return pedido != null && pedido.getTipoPagamento() == TipoPagamento.PIX;
+    private boolean isPixOrder(final VendaPagamentoGateway gateway) {
+        return gateway != null && gateway.getTipoPagamentoOnline() == TipoPagamentoOnline.PIX;
     }
 
-    private boolean hasPixPresentation(final PedidoEntity pedido) {
-        return !text(pedido == null ? null : pedido.getGatewayPixQrCode()).isBlank()
-                || !text(pedido == null ? null : pedido.getGatewayPixQrCodeBase64()).isBlank()
-                || !text(pedido == null ? null : pedido.getGatewayPaymentTicketUrl()).isBlank();
+    private boolean hasPixPresentation(final VendaPagamentoGateway gateway) {
+        return !text(gateway == null ? null : gateway.getPixQrCode()).isBlank()
+                || !text(gateway == null ? null : gateway.getPixQrCodeBase64()).isBlank()
+                || !text(gateway == null ? null : gateway.getPaymentTicketUrl()).isBlank();
     }
 
-    private CheckoutPreferenceResult buildCheckoutResultFromPedido(final PedidoEntity pedido) {
+    private CheckoutPreferenceResult buildCheckoutResultFromGateway(final VendaPagamentoGateway gateway) {
         return new CheckoutPreferenceResult(
-                pedido.getGatewayCheckoutUrl(),
-                pedido.getGatewayPreferenceId(),
-                pedido.getGatewayPaymentTicketUrl(),
-                pedido.getGatewayPixQrCode(),
-                pedido.getGatewayPixQrCodeBase64()
+                gateway.getCheckoutUrl(),
+                gateway.getPreferenceId(),
+                gateway.getPaymentTicketUrl(),
+                gateway.getPixQrCode(),
+                gateway.getPixQrCodeBase64()
         );
     }
 
-    private String buildPixDescription(final PedidoEntity pedido) {
-        return "Pedido #" + pedido.getId() + " - Rota das Praias";
+    private String buildPixDescription(final Venda venda) {
+        return "Venda #" + venda.getId();
     }
 
-    private BigDecimal safeTransactionAmount(final PedidoEntity pedido) {
-        final BigDecimal amount = pedido == null ? null : pedido.getTotal();
+    private BigDecimal safeTransactionAmount(final Venda venda) {
+        final BigDecimal amount = venda == null ? null : venda.getTotal();
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("O pedido precisa ter um valor valido para gerar o Pix.");
+            throw new IllegalStateException("A venda precisa ter um valor valido para gerar o Pix.");
         }
         return amount;
     }
@@ -472,11 +420,11 @@ public class MercadoPagoCheckoutService {
         return value.substring(0, maxLength);
     }
 
-    private LocalDateTime toLocalDateTime(final OffsetDateTime value) {
-        return value == null ? null : value.toLocalDateTime();
+    private Instant toInstant(final OffsetDateTime value) {
+        return value == null ? null : value.toInstant();
     }
 
-    private LocalDateTime firstNonNull(final LocalDateTime first, final LocalDateTime second) {
+    private Instant firstNonNull(final Instant first, final Instant second) {
         return first != null ? first : second;
     }
 
@@ -489,11 +437,11 @@ public class MercadoPagoCheckoutService {
     }
 
     public record CheckoutRequest(String payerName, String payerEmail, String payerCpf) {
-        public static CheckoutRequest fromCustomer(final CustomerEntity customer) {
-            if (customer == null) {
+        public static CheckoutRequest fromCliente(final Cliente cliente) {
+            if (cliente == null) {
                 return empty();
             }
-            return new CheckoutRequest(customer.getNome(), customer.getEmail(), customer.getCpf());
+            return new CheckoutRequest(cliente.getNome(), cliente.getEmail(), cliente.getDocumento());
         }
 
         public static CheckoutRequest empty() {
@@ -510,9 +458,9 @@ public class MercadoPagoCheckoutService {
     ) {
     }
 
-    public record PaymentSyncResult(Long pedidoId, String paymentId, String paymentStatus, boolean updated) {
-        public static PaymentSyncResult updated(final Long pedidoId, final String paymentId, final String paymentStatus) {
-            return new PaymentSyncResult(pedidoId, paymentId, paymentStatus, true);
+    public record PaymentSyncResult(Long vendaId, String paymentId, String paymentStatus, boolean updated) {
+        public static PaymentSyncResult updated(final Long vendaId, final String paymentId, final String paymentStatus) {
+            return new PaymentSyncResult(vendaId, paymentId, paymentStatus, true);
         }
 
         public static PaymentSyncResult ignored() {
