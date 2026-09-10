@@ -27,6 +27,13 @@ public enum PermissaoCatalogo {
     COMPRA_CRIAR("COMPRA", "Criar rascunho de compra e adicionar itens"),
     COMPRA_CONFIRMAR("COMPRA", "Confirmar compra — gera entrada de estoque e atualiza custo — auditado"),
 
+    CLIENTE_LER("CLIENTE", "Ver clientes cadastrados"),
+    CLIENTE_ESCREVER("CLIENTE", "Criar/editar clientes"),
+
+    VENDA_LER("VENDA", "Ver vendas registradas"),
+    VENDA_CRIAR("VENDA", "Registrar venda — gera saída de estoque"),
+    VENDA_CANCELAR("VENDA", "Cancelar venda confirmada — gera devolução de estoque — auditado"),
+
     USUARIO_GERENCIAR("ACESSO", "Criar/editar usuários, papéis e permissões deste tenant");
 
     private final String modulo;
