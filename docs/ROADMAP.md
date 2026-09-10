@@ -9,6 +9,82 @@ critério de saída (como saber que a fase terminou de verdade).
 
 ---
 
+## 📍 Próximos passos (ordem de prioridade)
+
+Lista viva — atualizada a cada corte de trabalho. Itens 1-2 bloqueiam o
+resto de verdade; 3 em diante é o que falta pra fechar a Fase D.
+
+1. **Teste manual do cliente PDV numa máquina real com display** (ação do
+   usuário/Eduardo, não automatizável nesta sessão). `TelaPareamento` e
+   `VendaScreen` só foram compiladas e revisadas — ninguém clicou nelas
+   ainda. Rodar `mvn exec:java -Dexec.mainClass=br.com.lojagenerica.pdvclient.App`
+   num Windows/Linux com monitor, contra um servidor local (`docker compose
+   up` no `platform/`), e percorrer: parear terminal → sincronizar catálogo
+   → registrar uma venda → conferir que ela aparece no servidor. Qualquer
+   problema de layout/usabilidade só aparece aqui.
+
+2. **UI web de administração — hoje não existe nenhuma.** Todo o núcleo
+   novo (`core.produto`, `core.cadastro`, `core.compra`, `core.venda`,
+   `core.acesso` etc.) só tem API REST (`/api/v1/**`); não há tela
+   nenhuma pra cadastrar categoria/produto/forma de pagamento/local de
+   estoque/usuário. Isso bloqueia o uso real do sistema — mesmo com o
+   PDV 100% pronto, não há como popular os cadastros que ele sincroniza,
+   a não ser via `curl`/Postman. Esse gap não estava explícito nas fases
+   originais (A-I assumiam "UI de gestão" só na Fase G, pra
+   papel/permissão especificamente) e precisa de uma decisão: um
+   frontend novo (SPA ou Thymeleaf, dentro de `platform/` mesmo) que
+   cubra pelo menos os 8 cadastros + produto + usuários, ou aceitar
+   Postman/curl como ferramenta de operação por enquanto. Recomendação:
+   uma tela mínima de CRUD genérico (uma grade por cadastro) entra
+   **antes** de terminar as telas do PDV que dependem desses dados
+   existirem de verdade.
+
+3. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
+   null, o que trava desconto (`VendaService.validarDesconto` exige
+   e-mail resolvível) e a atribuição "vendido por" que os relatórios/
+   auditoria vão precisar. Precisa de: recurso novo de sync
+   `usuario` (servidor: `UsuarioSyncDTO` + `PdvSyncService`, cliente:
+   `cache_usuario` com senha em bcrypt cacheada — mesmo hash que o
+   servidor usa, então funciona offline), tela de login simples antes de
+   abrir `VendaScreen`, e passar o `usuarioId` autenticado pro
+   `VendaLocalDao.registrarVenda` (hoje hardcoded `null` em `App`).
+
+4. **AjusteEstoqueScreen** (substitui `Dispatch.java`) — dá baixa/entrada
+   manual de estoque com motivo obrigatório, online-only ou via outbox
+   com um `TipoEventoPdv` novo (`AJUSTE_ESTOQUE`) espelhando o padrão de
+   `VENDA_REGISTRADA`/`VENDA_CANCELADA` (servidor + cliente, os dois
+   lados).
+
+5. **Recibo** — `Receipt.java` (legado) foi desenhado pro modelo
+   nome+cor+peso; adaptar pra imprimir `ItemVendaLocal` genérico
+   (produto+quantidade+preço, sem cor/peso) e plugar em
+   `VendaScreen.confirmarVenda`.
+
+6. **Pix repontado pro servidor** — hoje `MercadoPagoPixClient`/
+   `PixPaymentDialog` (legado) criam a cobrança direto do caixa, com o
+   token do Mercado Pago em texto no `config.properties` da loja (o que
+   a Fase D existe pra eliminar). O servidor já sabe criar cobrança Pix
+   pro canal online (`MercadoPagoCheckoutService`), mas não existe ainda
+   um endpoint equivalente pro canal PDV — precisa entrar em
+   `pdv.web` antes de repontar essas duas telas.
+
+7. **Relatórios locais** — adaptar `Stock.java`/`SalesReport.java`/
+   `SalesCalendar.java` pra ler de `cache_produto`/`venda_local` em vez
+   do SQLite antigo.
+
+8. **Limpeza final**: deletar `Production.java`/`ModifyProducts.java`/
+   `AdminSaas.java` (funcionalidade migra pra UI web do item 2), upgrade
+   `jpackage` no `pom.xml`, cortar o `mainClass` do assembly de
+   `mysquare.core.IMStart` pro `br.com.lojagenerica.pdvclient.App`.
+
+Depois que a Fase D fechar (critério de saída no corpo da fase, abaixo):
+Fase E (Financeiro) → F (Orçamentos/Devoluções) → G (Funcionários/
+Permissões, UI de gestão fina) → H (Custos/Relatórios/Dashboard) → I
+(Fiscal estrutural/Configurações) — cada uma já descrita em detalhe mais
+abaixo neste documento, sem mudança de escopo por enquanto.
+
+---
+
 ## ✅ Fase 0 — Fundação (concluída)
 
 **O que foi feito** (só em `platform/`; `pdv/` ainda não foi tocado — ele só
