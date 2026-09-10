@@ -204,38 +204,66 @@ condições (rateio de frete) → confirmar → saldo de estoque e custo médio
 do produto corretos → confirmar de novo é no-op. `mvn verify`: 11 testes,
 BUILD SUCCESS.
 
-## 🔄 Fase C — Clientes + Vendas/PDV (lado servidor)
+## ✅ Fase C — Clientes + Vendas/PDV (lado servidor) (concluída)
 
 Cliente entra **antes** de Venda (não depois, como a ordem do spec
-sugeriria) porque `venda.cliente_id` referencia cliente. Reescreve
-`PedidoEntity`→`Venda` (substitui, não estende — os 3 enums problemáticos
-de hoje, `StatusPedido`/`TipoPagamento`/`MotivoCancelamentoPedido`, viram
-3 máquinas de estado separadas + cadastros). `CheckoutService`/módulo de
-loja online recolocados pra montar `Venda` — a lógica do Mercado Pago e o
-módulo de entrega sobrevivem quase intactos.
+sugeriria) porque `venda.cliente_id` referencia cliente. `PedidoEntity`
+(e os 3 enums problemáticos `StatusPedido`/`TipoPagamento`/
+`MotivoCancelamentoPedido` que misturavam pagamento/entrega/cancelamento
+numa coisa só) foi **substituído**, não estendido, por `Venda`.
 
 - ✅ `Cliente` + `ClienteController` (só `nome` obrigatório).
-- ✅ `Venda`+`ItemVenda`+`VendaPagamento` (`core.venda`) + `VendaService`:
-  `registrar()` monta e confirma numa chamada só, idempotente por UUID
-  gerado no cliente (crítico pra Fase D); valida desconto contra
-  `papel_restricao` do usuário; `cancelar()` reverte estoque via
-  movimentação de entrada, auditado, idempotente.
-- ✅ Validado ponta a ponta (`VendaFlowIT`): registrar baixa estoque,
-  reenvio idempotente não duplica, cancelar devolve estoque, cancelar de
-  novo é no-op. `mvn verify`: 12 testes, BUILD SUCCESS.
-- ⬜ **Ainda falta** (a parte maior e mais arriscada da fase): repontar
-  `CheckoutService`/storefront/módulo de entrega pra montar `Venda` em vez
-  de `PedidoEntity`, e só então deletar `PedidoEntity`, `StatusPedido`,
-  `TipoPagamento`, `MotivoCancelamentoPedido`, e o catálogo antigo do IMS
-  (`ImsProdutoRepository`, `CatalogoService`, `AdminProdutoController`,
-  `PublicProdutoController`) que ainda coexistem com `core.produto`. Isso
-  toca o gateway de pagamento real (Mercado Pago) e o roteamento de
-  entrega — feito numa etapa separada, não misturado com a construção do
-  núcleo novo.
+- ✅ `Venda`+`ItemVenda`+`VendaPagamento` (`core.venda`) + `VendaService`
+  com dois ciclos de vida: `registrar()` (PDV/balcão, monta+confirma numa
+  chamada só) e `registrarPendente()`+`confirmarPagamento()` (checkout
+  online — nasce RASCUNHO, só baixa estoque quando o pagamento é
+  recebido). Idempotente por UUID; valida desconto contra
+  `papel_restricao`; `cancelar()` cobre RASCUNHO (cancela direto) e
+  CONFIRMADA (reverte estoque), auditado.
+- ✅ `CheckoutService`/`MercadoPagoCheckoutService` reescritos sobre
+  `Venda`+`VendaPagamentoGateway` (satélite 1:1, só canal ONLINE — os 12
+  campos de gateway que antes viviam direto em `PedidoEntity`). Pagamento
+  aprovado dispara `confirmarPagamento`; recusado/cancelado dispara
+  `cancelar`. Carrinho agora referencia `produtoId` (não mais nome+cor+
+  peso do catálogo do IMS).
+- ✅ **Removido** (dependia de `PedidoEntity`/catálogo antigo, sem FK
+  possível pra Compra/Orçamento/Devolução): `ImsProdutoRepository`,
+  `CatalogoService`, `domain.catalogo.Produto`, `AdminProdutoController`,
+  `PublicProdutoController`, `PedidoEntity`, `ItemPedidoEntity`,
+  `PedidoRepository`, `StatusPedido`, `TipoPagamento`,
+  `MotivoCancelamentoPedido`.
+- ✅ **Removido** o módulo inteiro de roteirização de entrega
+  (`EntregaRotaEntity`/`EntregaParadaEntity`, `AdminEntregaRouteService`,
+  `PublicDeliveryEstimateService`, controllers admin/motoboy) — dependia
+  também de `AdminUserEntity`, que não foi migrado pro modelo novo de
+  acesso; vira módulo próprio numa fase futura contra Venda+Usuario.
+  Mantido `DeliveryPricingService`/`DeliveryRouteService`/
+  `DeliveryRouteOptimizer` (só cálculo de frete, sem persistir rota) —
+  o checkout ainda cota frete pro modo ENTREGA.
+- Dois gaps reais de infraestrutura descobertos e corrigidos pelos
+  próprios testes: (1) `/api/public/**` (storefront/checkout) nunca teve
+  NENHUM mecanismo de resolução de tenant — só `/api/v1/**` via JWT
+  resolvia `TenantContext`. Criado `PublicTenantResolutionFilter`
+  (subdomínio em produção, header `X-Empresa` em dev/teste). (2)
+  `app_settings` (usado por `AppSettingService` — token do Mercado Pago,
+  tarifas de frete) não existia em nenhuma migration desde o pivot pra
+  Postgres na Fase 0 — adicionado V011.
+- Bug de mapeamento JPA pego pelo teste: `VendaPagamentoGateway` usa
+  `@MapsId` (ID copiado da Venda) — sem implementar `Persistable`, o
+  Spring Data JPA achava que a entidade já existia (ID não-nulo) e
+  tentava UPDATE em vez de INSERT na primeira gravação.
 
-**Saída completa da fase** (quando a parte pendente acima terminar):
-nenhuma referência a `PedidoEntity`/catálogo antigo restando no código;
-checkout e storefront funcionando contra `Venda`.
+**Pendências conhecidas pra produção multiempresa de verdade** (não
+bloqueiam as próximas fases): a URL de webhook do Mercado Pago ainda usa
+1 `app.web.base-url` global, não por subdomínio de tenant — funciona pra
+1 empresa por processo; `CustomerAuthController` perdeu a listagem de
+"meus pedidos" (dependia de `PedidoRepository`) até `CustomerEntity`
+(login) e `core.parceiro.Cliente` (comercial) serem correlacionados.
+
+**Saída confirmada**: `mvn verify`: 14 testes, BUILD SUCCESS.
+`CheckoutServiceIT` prova o ciclo completo do canal online (RASCUNHO →
+staff confirma dinheiro → baixa estoque) e que Pix sem token configurado
+falha de forma limpa (409), não 500.
 
 ## ⬜ Fase D — Cliente PDV offline + sincronização
 
