@@ -34,7 +34,9 @@ public enum PermissaoCatalogo {
     VENDA_CRIAR("VENDA", "Registrar venda — gera saída de estoque"),
     VENDA_CANCELAR("VENDA", "Cancelar venda confirmada — gera devolução de estoque — auditado"),
 
-    USUARIO_GERENCIAR("ACESSO", "Criar/editar usuários, papéis e permissões deste tenant");
+    USUARIO_GERENCIAR("ACESSO", "Criar/editar usuários, papéis e permissões deste tenant"),
+
+    TERMINAL_GERENCIAR("PDV", "Parear/desativar terminais de PDV");
 
     private final String modulo;
     private final String descricao;

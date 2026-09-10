@@ -44,7 +44,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return !uri.startsWith("/api/v1/") || uri.startsWith("/api/v1/auth/");
+        // /api/v1/pdv/sync/** é autenticado por TerminalAuthenticationFilter
+        // (chave de API do terminal, não JWT de usuário — o caixa sincroniza
+        // sem ninguém logado).
+        return !uri.startsWith("/api/v1/") || uri.startsWith("/api/v1/auth/") || uri.startsWith("/api/v1/pdv/sync/");
     }
 
     @Override
