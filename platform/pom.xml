@@ -49,6 +49,14 @@
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- Só pro importador (tools.importador) ler um rbp.db legado — nenhuma
+         outra parte do sistema usa SQLite (ver ArchitectureRulesTest, que
+         restringe essa dependência a esse único pacote). -->
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.28.0</version>
+    </dependency>
     <!-- Flyway roda por fora do autoconfigure padrão do Spring Boot (que só
          conhece 1 schema) — ver PlataformaMigrationRunner/TenantMigrationRunner,
          Fase A. spring.flyway.enabled=false evita a dupla-execução. -->

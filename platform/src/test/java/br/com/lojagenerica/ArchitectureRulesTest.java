@@ -23,9 +23,11 @@ class ArchitectureRulesTest {
     @Test
     void sqliteMustNotBeUsedAnymore() {
         ArchRule rule = noClasses()
+                .that().resideOutsideOfPackage("br.com.lojagenerica.tools.importador..")
                 .should().dependOnClassesThat().resideInAPackage("org.sqlite..")
                 .because("o pivot 'Loja Genérica' substitui o SQLite compartilhado com o IMS "
-                        + "por Postgres com schema por tenant (ver plano de fases, Fase 0)");
+                        + "por Postgres com schema por tenant (ver plano de fases, Fase 0) — a única "
+                        + "exceção é o importador, que lê um rbp.db legado uma única vez por empresa");
         rule.check(PRODUCTION_CLASSES);
     }
 

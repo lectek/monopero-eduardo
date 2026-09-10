@@ -53,6 +53,26 @@ public class ProdutoService {
     }
 
     /**
+     * Usado só por criação com dado já conhecido de fonte externa (ex.:
+     * {@code tools.importador}) — define preço/custo iniciais sem passar
+     * pelo fluxo de auditoria de {@link #alterarPreco}, porque não existe
+     * "preço anterior" pra comparar num produto que acabou de nascer.
+     */
+    @Transactional
+    public Produto criarComDadosIniciais(String nome, Long unidadeEstoqueId, String codigoInterno,
+                                          String descricao, BigDecimal precoVenda) {
+        var unidade = unidadeMedidaRepository.findById(unidadeEstoqueId)
+                .orElseThrow(() -> new NoSuchElementException("Unidade de medida " + unidadeEstoqueId + " não encontrada"));
+        Produto produto = new Produto(nome, unidade);
+        produto.setCodigoInterno(codigoInterno);
+        produto.setDescricao(descricao);
+        if (precoVenda != null) {
+            produto.definirPrecoECusto(precoVenda, null);
+        }
+        return produtoRepository.save(produto);
+    }
+
+    /**
      * Único caminho pra mudar preço/custo — grava histórico e publica
      * evento de auditoria (item #1 da lista obrigatória do spec). Escrever
      * direto em {@code produto.precoVenda} fora daqui é o que o
