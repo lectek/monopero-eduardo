@@ -20,6 +20,13 @@ public enum PermissaoCatalogo {
     ESTOQUE_AJUSTAR("ESTOQUE", "Registrar movimentação manual (perda, doação, ajuste) — auditado"),
     INVENTARIO_GERENCIAR("ESTOQUE", "Abrir, contar e finalizar inventário"),
 
+    FORNECEDOR_LER("FORNECEDOR", "Ver fornecedores cadastrados"),
+    FORNECEDOR_ESCREVER("FORNECEDOR", "Criar/editar fornecedores"),
+
+    COMPRA_LER("COMPRA", "Ver compras registradas"),
+    COMPRA_CRIAR("COMPRA", "Criar rascunho de compra e adicionar itens"),
+    COMPRA_CONFIRMAR("COMPRA", "Confirmar compra — gera entrada de estoque e atualiza custo — auditado"),
+
     USUARIO_GERENCIAR("ACESSO", "Criar/editar usuários, papéis e permissões deste tenant");
 
     private final String modulo;

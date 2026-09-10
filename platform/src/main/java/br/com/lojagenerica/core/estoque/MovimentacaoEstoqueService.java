@@ -113,7 +113,13 @@ public class MovimentacaoEstoqueService {
         return movimentacao;
     }
 
-    private BigDecimal resolverFatorConversao(Produto produto, UnidadeMedida unidade) {
+    /**
+     * Público também pra quem precisa calcular quantidade_base ANTES de
+     * chamar {@link #registrar} — ex. CompraService monta o item_compra
+     * (que guarda seu próprio fator/quantidade_base) usando esta mesma
+     * resolução, pra não ter duas lógicas de conversão divergentes.
+     */
+    public BigDecimal resolverFatorConversao(Produto produto, UnidadeMedida unidade) {
         if (unidade.getId().equals(produto.getUnidadeEstoque().getId())) {
             return BigDecimal.ONE;
         }
