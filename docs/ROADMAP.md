@@ -303,24 +303,56 @@ mais fica em arquivo texto na loja).
 
 **Saída confirmada**: `mvn verify`: 15 classes de IT, BUILD SUCCESS.
 
-### ⬜ Lado cliente (Swing) — não iniciado
+### 🔄 Lado cliente (Swing) — backbone não-visual concluído, telas pendentes
 
-Reescrita do `pdv/` (ainda intocado desde a cópia inicial) contra o
-servidor acima: SQLite local (`pdv-local.db`, não mais `rbp.db`) + tabela
-`sync_outbox` (evento gravado na mesma transação SQLite que a venda) +
-tela de pareamento de terminal + thread de sync em background com retry
-com backoff. Envolve dividir `Db.java` em `LocalDb`+DAOs, reescrever
-`Sale.java`→`VendaScreen`, deletar `Production.java`/`ModifyProducts.java`/
-`AdminSaas.java`, reescrever `Dispatch.java`→`AjusteEstoqueScreen`, subir
-`pom.xml` de Java 8→17 com `jpackage` (ver plano completo, §6/§7). É um
-esforço de GUI desktop com perfil bem diferente do resto do backend — vale
-tratar como sua própria frente de trabalho, não como continuação direta do
-que já foi construído aqui.
+`pdv/` saiu do layout antigo (`sourceDirectory=src`, Java 8) para o padrão
+Maven (`src/main/java`, Java 17) — o legado (`mysquare.core`, intocado
+desde a cópia inicial) foi só movido (`git mv`, mesmo pacote), pra caber
+lado a lado com o pacote novo `br.com.lojagenerica.pdvclient` durante a
+migração incremental.
+
+Construído e testado (12 testes JUnit5, sem precisar de GUI nem servidor
+real — `HttpServer` embutido faz de servidor falso):
+- `LocalDb`: uma conexão por instância (não mais o singleton estático do
+  antigo `Db.java`, que tinha deadlock latente assim que uma thread de
+  sync existisse ao lado da EDT do Swing) + bootstrap de schema
+  idempotente (`cache_produto`, `sync_cursor`, `sync_outbox`,
+  `venda_local[_item|_pagamento]`).
+- `VendaLocalDao.registrarVenda`: grava o espelho local da venda e
+  enfileira o evento de sync na MESMA transação SQLite — a invariante
+  central do PDV offline (uma venda nunca existe sem seu evento de
+  outbox). O uuid da venda vira o `evento_uuid`, espelhando a
+  idempotência de `VendaRegistradaPayload`/`EventoPushRequest` do
+  servidor.
+- `OutboxDao`: fila local com backoff exponencial por evento (5s a
+  15min) em erro de rede, status PENDENTE/ENVIADO/REJEITADO.
+- `ApiClient` + `SyncScheduler`: thread única em background, drena o
+  outbox a cada 10s e puxa o catálogo (cursor incremental) a cada 60s
+  contra o servidor — nunca bloqueia a EDT.
+- `ConfiguracaoLocalStore`/`LocalPaths`: estado de pareamento do
+  terminal (`servidorBaseUrl` + `terminalApiKey`) em
+  `%APPDATA%/lojagenerica/config.properties`.
+
+### ⬜ Telas (Swing) — não iniciado
+
+Falta ligar o backbone acima às telas de fato: tela de pareamento de
+terminal (cola a chave de API gerada pelo admin web), reescrever
+`Sale.java`→`VendaScreen` contra `cache_produto`/`VendaLocalDao` (cascata
+cor/peso do IMS sai, busca por nome/código/barras entra), deletar
+`Production.java`/`ModifyProducts.java`/`AdminSaas.java` (migram pro
+admin web), reescrever `Dispatch.java`→`AjusteEstoqueScreen`, adaptar
+`Stock.java`/`SalesReport.java`/`SalesCalendar.java`/`Receipt.java` pro
+schema local novo, repontar `MercadoPagoPixClient`/`PixPaymentDialog`
+(Pix é online-only por design — token nunca mais fica em arquivo texto na
+loja), `jpackage` pro instalador (ver plano completo, §6/§7). É um esforço
+de GUI desktop que não dá pra verificar visualmente nesta sessão (sem
+display) — cada tela deve ser tratada como sua própria fatia, comitada e
+revisada antes da próxima.
 
 **Saída (quando entrar)**: venda feita offline reflete no estoque local na
 hora, chega ao servidor depois de reconectar, reconexão no meio do envio
-não duplica a venda (já provado do lado servidor; falta o outbox do lado
-cliente).
+não duplica a venda (já provado ponta a ponta no backbone; falta só a UI
+que chama `VendaLocalDao` de verdade).
 
 ## ⬜ Fase E — Financeiro
 
