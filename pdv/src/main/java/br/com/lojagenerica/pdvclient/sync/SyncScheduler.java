@@ -1,6 +1,10 @@
 package br.com.lojagenerica.pdvclient.sync;
 
 import br.com.lojagenerica.pdvclient.local.EventoOutbox;
+import br.com.lojagenerica.pdvclient.local.FormaPagamentoCache;
+import br.com.lojagenerica.pdvclient.local.FormaPagamentoCacheDao;
+import br.com.lojagenerica.pdvclient.local.LocalEstoqueCache;
+import br.com.lojagenerica.pdvclient.local.LocalEstoqueCacheDao;
 import br.com.lojagenerica.pdvclient.local.OutboxDao;
 import br.com.lojagenerica.pdvclient.local.ProdutoCache;
 import br.com.lojagenerica.pdvclient.local.ProdutoCacheDao;
@@ -26,14 +30,20 @@ public final class SyncScheduler {
     private final ApiClient apiClient;
     private final OutboxDao outboxDao;
     private final ProdutoCacheDao produtoCacheDao;
+    private final FormaPagamentoCacheDao formaPagamentoCacheDao;
+    private final LocalEstoqueCacheDao localEstoqueCacheDao;
     private final SyncCursorDao syncCursorDao;
     private final ScheduledExecutorService executor;
     private volatile Runnable aposCadaTick = () -> { };
 
-    public SyncScheduler(ApiClient apiClient, OutboxDao outboxDao, ProdutoCacheDao produtoCacheDao, SyncCursorDao syncCursorDao) {
+    public SyncScheduler(ApiClient apiClient, OutboxDao outboxDao, ProdutoCacheDao produtoCacheDao,
+                          FormaPagamentoCacheDao formaPagamentoCacheDao, LocalEstoqueCacheDao localEstoqueCacheDao,
+                          SyncCursorDao syncCursorDao) {
         this.apiClient = apiClient;
         this.outboxDao = outboxDao;
         this.produtoCacheDao = produtoCacheDao;
+        this.formaPagamentoCacheDao = formaPagamentoCacheDao;
+        this.localEstoqueCacheDao = localEstoqueCacheDao;
         this.syncCursorDao = syncCursorDao;
         this.executor = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "pdv-sync");
@@ -124,6 +134,22 @@ public final class SyncScheduler {
             }
         } catch (Exception e) {
             // rede indisponível — próximo tick tenta de novo; pull é idempotente por natureza (upsert por id), sem estado de erro a guardar.
+        }
+
+        try {
+            for (FormaPagamentoRemoto f : apiClient.pullFormasPagamento()) {
+                formaPagamentoCacheDao.upsert(new FormaPagamentoCache(f.id(), f.nome(), f.natureza(), f.afetaCaixa(), f.ativo()));
+            }
+        } catch (Exception e) {
+            // idem — cadastro pequeno, próximo tick tenta de novo.
+        }
+
+        try {
+            for (LocalEstoqueRemoto l : apiClient.pullLocaisEstoque()) {
+                localEstoqueCacheDao.upsert(new LocalEstoqueCache(l.id(), l.nome(), l.tipo(), l.principal(), l.ativo()));
+            }
+        } catch (Exception e) {
+            // idem.
         }
     }
 

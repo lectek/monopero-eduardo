@@ -58,6 +58,27 @@ public final class LocalDb implements AutoCloseable {
             stat.execute("CREATE INDEX IF NOT EXISTS idx_cache_produto_nome ON cache_produto(nome);");
             stat.execute("CREATE INDEX IF NOT EXISTS idx_cache_produto_codigo ON cache_produto(codigo_interno);");
 
+            // Cadastros pequenos, sem cursor — o pull sempre devolve a lista inteira e o DAO
+            // aplica como upsert (id é a chave estável vinda do servidor).
+            stat.execute("""
+                    CREATE TABLE IF NOT EXISTS cache_forma_pagamento (
+                        id           INTEGER PRIMARY KEY,
+                        nome         TEXT NOT NULL,
+                        natureza     TEXT NOT NULL,
+                        afeta_caixa  INTEGER NOT NULL DEFAULT 1,
+                        ativo        INTEGER NOT NULL DEFAULT 1
+                    );
+                    """);
+            stat.execute("""
+                    CREATE TABLE IF NOT EXISTS cache_local_estoque (
+                        id         INTEGER PRIMARY KEY,
+                        nome       TEXT NOT NULL,
+                        tipo       TEXT,
+                        principal  INTEGER NOT NULL DEFAULT 0,
+                        ativo      INTEGER NOT NULL DEFAULT 1
+                    );
+                    """);
+
             stat.execute("""
                     CREATE TABLE IF NOT EXISTS sync_cursor (
                         recurso     TEXT PRIMARY KEY,

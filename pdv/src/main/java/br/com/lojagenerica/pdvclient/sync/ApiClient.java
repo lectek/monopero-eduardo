@@ -88,6 +88,32 @@ public final class ApiClient {
         return new PullResultado(produtos, resposta.optString("proximoCursor", null), resposta.getBoolean("temMais"));
     }
 
+    /** Cadastro pequeno, sem cursor — servidor sempre devolve a lista inteira. */
+    public List<FormaPagamentoRemoto> pullFormasPagamento() throws IOException, InterruptedException {
+        JSONObject resposta = enviar("GET", "/api/v1/pdv/sync/pull?recurso=forma_pagamento&limite=500", null);
+        JSONArray itensJson = resposta.getJSONArray("itens");
+        List<FormaPagamentoRemoto> formas = new ArrayList<>();
+        for (int i = 0; i < itensJson.length(); i++) {
+            JSONObject f = itensJson.getJSONObject(i);
+            formas.add(new FormaPagamentoRemoto(f.getLong("id"), f.getString("nome"), f.getString("natureza"),
+                    f.getBoolean("afetaCaixa"), f.getBoolean("ativo")));
+        }
+        return formas;
+    }
+
+    /** Cadastro pequeno, sem cursor — servidor sempre devolve a lista inteira. */
+    public List<LocalEstoqueRemoto> pullLocaisEstoque() throws IOException, InterruptedException {
+        JSONObject resposta = enviar("GET", "/api/v1/pdv/sync/pull?recurso=local_estoque&limite=500", null);
+        JSONArray itensJson = resposta.getJSONArray("itens");
+        List<LocalEstoqueRemoto> locais = new ArrayList<>();
+        for (int i = 0; i < itensJson.length(); i++) {
+            JSONObject l = itensJson.getJSONObject(i);
+            locais.add(new LocalEstoqueRemoto(l.getLong("id"), l.getString("nome"), l.optString("tipo", null),
+                    l.getBoolean("principal"), l.getBoolean("ativo")));
+        }
+        return locais;
+    }
+
     /** Usado pela tela de pareamento pra validar a chave antes de salvar — um pull vazio já confirma autenticação + tenant certos. */
     public boolean testarConexao() {
         try {

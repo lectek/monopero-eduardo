@@ -2,8 +2,10 @@ package br.com.lojagenerica.pdvclient.sync;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.lojagenerica.pdvclient.local.FormaPagamentoCacheDao;
 import br.com.lojagenerica.pdvclient.local.ItemVendaLocal;
 import br.com.lojagenerica.pdvclient.local.LocalDb;
+import br.com.lojagenerica.pdvclient.local.LocalEstoqueCacheDao;
 import br.com.lojagenerica.pdvclient.local.OutboxDao;
 import br.com.lojagenerica.pdvclient.local.PagamentoVendaLocal;
 import br.com.lojagenerica.pdvclient.local.ProdutoCacheDao;
@@ -63,6 +65,8 @@ class SyncSchedulerTest {
             OutboxDao outboxDao = new OutboxDao(db);
             VendaLocalDao vendaLocalDao = new VendaLocalDao(db, outboxDao);
             ProdutoCacheDao produtoCacheDao = new ProdutoCacheDao(db);
+            FormaPagamentoCacheDao formaPagamentoCacheDao = new FormaPagamentoCacheDao(db);
+            LocalEstoqueCacheDao localEstoqueCacheDao = new LocalEstoqueCacheDao(db);
             SyncCursorDao syncCursorDao = new SyncCursorDao(db);
 
             vendaLocalDao.registrarVenda(1L, null, null, null,
@@ -71,7 +75,8 @@ class SyncSchedulerTest {
             assertThat(outboxDao.contarPendentes()).isEqualTo(1);
 
             ApiClient apiClient = new ApiClient("http://localhost:" + server.getAddress().getPort(), "empresa_001.segredo");
-            SyncScheduler scheduler = new SyncScheduler(apiClient, outboxDao, produtoCacheDao, syncCursorDao);
+            SyncScheduler scheduler = new SyncScheduler(apiClient, outboxDao, produtoCacheDao,
+                    formaPagamentoCacheDao, localEstoqueCacheDao, syncCursorDao);
             scheduler.iniciar();
             try {
                 aguardarAte(() -> outboxDao.contarPendentes() == 0, 3000);
