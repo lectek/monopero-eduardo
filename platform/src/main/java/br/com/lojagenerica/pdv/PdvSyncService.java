@@ -1,5 +1,9 @@
 package br.com.lojagenerica.pdv;
 
+import br.com.lojagenerica.core.cadastro.FormaPagamento;
+import br.com.lojagenerica.core.cadastro.FormaPagamentoRepository;
+import br.com.lojagenerica.core.cadastro.LocalEstoque;
+import br.com.lojagenerica.core.cadastro.LocalEstoqueRepository;
 import br.com.lojagenerica.core.produto.Produto;
 import br.com.lojagenerica.core.produto.ProdutoRepository;
 import br.com.lojagenerica.core.venda.CanalVenda;
@@ -41,22 +45,38 @@ public class PdvSyncService {
     private final VendaRepository vendaRepository;
     private final VendaService vendaService;
     private final ProdutoRepository produtoRepository;
+    private final FormaPagamentoRepository formaPagamentoRepository;
+    private final LocalEstoqueRepository localEstoqueRepository;
     private final ObjectMapper objectMapper;
 
     public PdvSyncService(PdvEventoRecebidoRepository eventoRecebidoRepository, VendaRepository vendaRepository,
-                           VendaService vendaService, ProdutoRepository produtoRepository, ObjectMapper objectMapper) {
+                           VendaService vendaService, ProdutoRepository produtoRepository,
+                           FormaPagamentoRepository formaPagamentoRepository, LocalEstoqueRepository localEstoqueRepository,
+                           ObjectMapper objectMapper) {
         this.eventoRecebidoRepository = eventoRecebidoRepository;
         this.vendaRepository = vendaRepository;
         this.vendaService = vendaService;
         this.produtoRepository = produtoRepository;
+        this.formaPagamentoRepository = formaPagamentoRepository;
+        this.localEstoqueRepository = localEstoqueRepository;
         this.objectMapper = objectMapper;
     }
 
-    /** Só "produto" por enquanto — categoria/unidade/forma_pagamento/cliente entram quando o cliente Swing precisar de fato. */
-    public PullResponse<ProdutoSyncDTO> pull(String recurso, String desde, int limite) {
-        if (!"produto".equals(recurso)) {
-            throw new IllegalArgumentException("Recurso de sincronização não suportado: " + recurso);
-        }
+    /**
+     * "produto" é incremental por cursor (catálogo pode ser grande); "forma_pagamento" e
+     * "local_estoque" são cadastros pequenos — o terminal puxa a lista inteira a cada tick,
+     * sem cursor. Categoria/unidade/cliente entram quando o cliente Swing precisar de fato.
+     */
+    public PullResponse<?> pull(String recurso, String desde, int limite) {
+        return switch (recurso) {
+            case "produto" -> pullProduto(desde, limite);
+            case "forma_pagamento" -> pullFormaPagamento();
+            case "local_estoque" -> pullLocalEstoque();
+            default -> throw new IllegalArgumentException("Recurso de sincronização não suportado: " + recurso);
+        };
+    }
+
+    private PullResponse<ProdutoSyncDTO> pullProduto(String desde, int limite) {
         Instant cursor = desde != null && !desde.isBlank() ? Instant.parse(desde) : Instant.EPOCH;
         List<Produto> produtos = produtoRepository.findByAtualizadoEmAfterOrderByAtualizadoEmAsc(
                 cursor, PageRequest.of(0, limite));
@@ -68,6 +88,22 @@ public class PdvSyncService {
         String proximoCursor = itens.isEmpty() ? desde : itens.get(itens.size() - 1).atualizadoEm().toString();
         boolean temMais = itens.size() == limite;
         return new PullResponse<>(itens, proximoCursor, temMais);
+    }
+
+    private PullResponse<FormaPagamentoSyncDTO> pullFormaPagamento() {
+        List<FormaPagamentoSyncDTO> itens = formaPagamentoRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(FormaPagamento::getId))
+                .map(f -> new FormaPagamentoSyncDTO(f.getId(), f.getNome(), f.getNatureza().name(), f.isAfetaCaixa(), f.isAtivo()))
+                .toList();
+        return new PullResponse<>(itens, null, false);
+    }
+
+    private PullResponse<LocalEstoqueSyncDTO> pullLocalEstoque() {
+        List<LocalEstoqueSyncDTO> itens = localEstoqueRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(LocalEstoque::getId))
+                .map(l -> new LocalEstoqueSyncDTO(l.getId(), l.getNome(), l.getTipo(), l.isPrincipal(), l.isAtivo()))
+                .toList();
+        return new PullResponse<>(itens, null, false);
     }
 
     public ResultadoEventoResponse processar(Long terminalId, EventoPushRequest evento) {

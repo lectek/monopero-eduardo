@@ -170,6 +170,22 @@ class PdvSyncFlowIT {
         ResponseEntity<PullResponseProduto> segundaPagina = pull(terminalHeaders, cursor);
         assertThat(segundaPagina.getBody().itens()).extracting(ProdutoSyncDTO::id)
                 .containsExactly(produtoNovoId);
+
+        // forma_pagamento e local_estoque são cadastros pequenos — sem cursor, lista inteira sempre
+        ResponseEntity<PullResponseFormaPagamento> formasPagamento = restTemplate.exchange(
+                UriComponentsBuilder.fromHttpUrl(url("/api/v1/pdv/sync/pull")).queryParam("recurso", "forma_pagamento")
+                        .toUriString(),
+                HttpMethod.GET, new HttpEntity<>(terminalHeaders), PullResponseFormaPagamento.class);
+        assertThat(formasPagamento.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(formasPagamento.getBody().itens()).extracting(FormaPagamentoSyncDTO::id).contains(formaPagamentoId);
+        assertThat(formasPagamento.getBody().temMais()).isFalse();
+
+        ResponseEntity<PullResponseLocalEstoque> locaisEstoque = restTemplate.exchange(
+                UriComponentsBuilder.fromHttpUrl(url("/api/v1/pdv/sync/pull")).queryParam("recurso", "local_estoque")
+                        .toUriString(),
+                HttpMethod.GET, new HttpEntity<>(terminalHeaders), PullResponseLocalEstoque.class);
+        assertThat(locaisEstoque.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(locaisEstoque.getBody().itens()).extracting(LocalEstoqueSyncDTO::id).contains(localEstoqueId);
     }
 
     private Map<String, Object> paraMapa(Object payload) {
@@ -195,6 +211,12 @@ class PdvSyncFlowIT {
 
     /** Testcontainers/Jackson não deserializam o `PullResponse<T>` genérico direto — DTO concreto só pro teste. */
     private record PullResponseProduto(List<ProdutoSyncDTO> itens, String proximoCursor, boolean temMais) {
+    }
+
+    private record PullResponseFormaPagamento(List<FormaPagamentoSyncDTO> itens, String proximoCursor, boolean temMais) {
+    }
+
+    private record PullResponseLocalEstoque(List<LocalEstoqueSyncDTO> itens, String proximoCursor, boolean temMais) {
     }
 
     private void assertSaldo(String esperado) {

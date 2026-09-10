@@ -2,7 +2,6 @@ package br.com.lojagenerica.pdv.web;
 
 import br.com.lojagenerica.pdv.EventoPushRequest;
 import br.com.lojagenerica.pdv.PdvSyncService;
-import br.com.lojagenerica.pdv.ProdutoSyncDTO;
 import br.com.lojagenerica.pdv.PullResponse;
 import br.com.lojagenerica.pdv.ResultadoEventoResponse;
 import br.com.lojagenerica.security.TerminalAuthenticationFilter;
@@ -39,7 +38,7 @@ public class PdvSyncController {
     }
 
     @GetMapping("/pull")
-    public PullResponse<ProdutoSyncDTO> pull(
+    public PullResponse<?> pull(
             @RequestParam String recurso,
             @RequestParam(required = false) String desde,
             @RequestParam(defaultValue = "500") int limite) {
