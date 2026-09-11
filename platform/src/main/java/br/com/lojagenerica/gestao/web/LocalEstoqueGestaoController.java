@@ -2,10 +2,12 @@ package br.com.lojagenerica.gestao.web;
 
 import br.com.lojagenerica.core.cadastro.LocalEstoque;
 import br.com.lojagenerica.core.cadastro.LocalEstoqueRepository;
+import jakarta.validation.constraints.NotBlank;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * br.com.lojagenerica.pdv.PdvSyncService).
  */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('CADASTRO_GERENCIAR')")
 public class LocalEstoqueGestaoController {
 
@@ -45,14 +48,15 @@ public class LocalEstoqueGestaoController {
     }
 
     @PostMapping("/gestao/locais-estoque")
-    public String criar(@RequestParam String nome, @RequestParam(required = false) String tipo,
+    public String criar(@RequestParam @NotBlank String nome, @RequestParam(required = false) String tipo,
                          @RequestParam(defaultValue = "false") boolean principal) {
         localEstoqueRepository.save(new LocalEstoque(nome, tipo, principal));
         return "redirect:/gestao/locais-estoque";
     }
 
     @PostMapping("/gestao/locais-estoque/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome, @RequestParam(required = false) String tipo,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
+                             @RequestParam(required = false) String tipo,
                              @RequestParam(defaultValue = "false") boolean principal,
                              @RequestParam(defaultValue = "false") boolean ativo) {
         LocalEstoque local = buscarOuFalhar(id);

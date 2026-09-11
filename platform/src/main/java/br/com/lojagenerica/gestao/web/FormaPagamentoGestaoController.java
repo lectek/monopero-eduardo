@@ -3,11 +3,14 @@ package br.com.lojagenerica.gestao.web;
 import br.com.lojagenerica.core.cadastro.FormaPagamento;
 import br.com.lojagenerica.core.cadastro.FormaPagamentoRepository;
 import br.com.lojagenerica.core.cadastro.NaturezaFormaPagamento;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /** CRUD de forma de pagamento — o usuário cria os métodos, natureza só classifica se afeta caixa físico. */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('CADASTRO_GERENCIAR')")
 public class FormaPagamentoGestaoController {
 
@@ -45,7 +49,7 @@ public class FormaPagamentoGestaoController {
     }
 
     @PostMapping("/gestao/formas-pagamento")
-    public String criar(@RequestParam String nome, @RequestParam NaturezaFormaPagamento natureza,
+    public String criar(@RequestParam @NotBlank String nome, @RequestParam @NotNull NaturezaFormaPagamento natureza,
                          @RequestParam(defaultValue = "true") boolean afetaCaixa,
                          @RequestParam(defaultValue = "false") boolean permiteParcelamento,
                          @RequestParam(required = false) Short maxParcelas,
@@ -61,7 +65,8 @@ public class FormaPagamentoGestaoController {
     }
 
     @PostMapping("/gestao/formas-pagamento/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome, @RequestParam NaturezaFormaPagamento natureza,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
+                             @RequestParam @NotNull NaturezaFormaPagamento natureza,
                              @RequestParam(defaultValue = "true") boolean afetaCaixa,
                              @RequestParam(defaultValue = "false") boolean permiteParcelamento,
                              @RequestParam(required = false) Short maxParcelas,

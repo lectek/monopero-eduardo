@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestão — erro</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <div class="card p-4" style="max-width:520px;margin-inline:auto;margin-top:3rem;">
+      <div class="alert alert-error" th:text="${mensagem}"></div>
+      <p class="mt-8"><a class="btn btn--primary" th:href="${voltar}">Voltar</a></p>
+    </div>
+  </main>
+</body>
+</html>

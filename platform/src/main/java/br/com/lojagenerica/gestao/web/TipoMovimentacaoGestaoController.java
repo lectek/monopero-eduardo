@@ -3,10 +3,13 @@ package br.com.lojagenerica.gestao.web;
 import br.com.lojagenerica.core.cadastro.SentidoMovimentacao;
 import br.com.lojagenerica.core.cadastro.TipoMovimentacao;
 import br.com.lojagenerica.core.cadastro.TipoMovimentacaoRepository;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * QUEBRA, DOACAO...) passam por esta tela.
  */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('CADASTRO_GERENCIAR')")
 public class TipoMovimentacaoGestaoController {
 
@@ -54,7 +58,8 @@ public class TipoMovimentacaoGestaoController {
     }
 
     @PostMapping("/gestao/tipos-movimentacao")
-    public String criar(@RequestParam String codigo, @RequestParam String nome, @RequestParam SentidoMovimentacao sentido,
+    public String criar(@RequestParam @NotBlank String codigo, @RequestParam @NotBlank String nome,
+                         @RequestParam @NotNull SentidoMovimentacao sentido,
                          @RequestParam(defaultValue = "false") boolean exigeMotivo,
                          @RequestParam(defaultValue = "false") boolean afetaCustoMedio) {
         tipoMovimentacaoRepository.save(new TipoMovimentacao(codigo, nome, sentido, false, exigeMotivo, afetaCustoMedio));
@@ -62,7 +67,7 @@ public class TipoMovimentacaoGestaoController {
     }
 
     @PostMapping("/gestao/tipos-movimentacao/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
                              @RequestParam(defaultValue = "false") boolean exigeMotivo,
                              @RequestParam(defaultValue = "false") boolean afetaCustoMedio,
                              @RequestParam(defaultValue = "false") boolean ativo) {

@@ -2,10 +2,12 @@ package br.com.lojagenerica.gestao.web;
 
 import br.com.lojagenerica.core.cadastro.UnidadeMedida;
 import br.com.lojagenerica.core.cadastro.UnidadeMedidaRepository;
+import jakarta.validation.constraints.NotBlank;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /** CRUD de unidade de medida — lista livre, nada seedado (ver docs/CONTEXTO.md). */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('CADASTRO_GERENCIAR')")
 public class UnidadeMedidaGestaoController {
 
@@ -41,7 +44,7 @@ public class UnidadeMedidaGestaoController {
     }
 
     @PostMapping("/gestao/unidades-medida")
-    public String criar(@RequestParam String codigo, @RequestParam String descricao,
+    public String criar(@RequestParam @NotBlank String codigo, @RequestParam @NotBlank String descricao,
                          @RequestParam(defaultValue = "0") short casasDecimais,
                          @RequestParam(defaultValue = "false") boolean fracionavel) {
         unidadeMedidaRepository.save(new UnidadeMedida(codigo, descricao, casasDecimais, fracionavel));
@@ -49,7 +52,8 @@ public class UnidadeMedidaGestaoController {
     }
 
     @PostMapping("/gestao/unidades-medida/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String codigo, @RequestParam String descricao,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String codigo,
+                             @RequestParam @NotBlank String descricao,
                              @RequestParam(defaultValue = "0") short casasDecimais,
                              @RequestParam(defaultValue = "false") boolean fracionavel,
                              @RequestParam(defaultValue = "false") boolean ativo) {

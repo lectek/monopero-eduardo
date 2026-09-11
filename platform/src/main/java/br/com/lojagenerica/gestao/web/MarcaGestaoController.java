@@ -2,10 +2,12 @@ package br.com.lojagenerica.gestao.web;
 
 import br.com.lojagenerica.core.cadastro.Marca;
 import br.com.lojagenerica.core.cadastro.MarcaRepository;
+import jakarta.validation.constraints.NotBlank;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * evitando as pegadinhas de {@code th:field} com checkbox/record.
  */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('CADASTRO_GERENCIAR')")
 public class MarcaGestaoController {
 
@@ -46,13 +49,13 @@ public class MarcaGestaoController {
     }
 
     @PostMapping("/gestao/marcas")
-    public String criar(@RequestParam String nome, @RequestParam(required = false) String fabricante) {
+    public String criar(@RequestParam @NotBlank String nome, @RequestParam(required = false) String fabricante) {
         marcaRepository.save(new Marca(nome, fabricante));
         return "redirect:/gestao/marcas";
     }
 
     @PostMapping("/gestao/marcas/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
                              @RequestParam(required = false) String fabricante,
                              @RequestParam(defaultValue = "false") boolean ativo) {
         Marca marca = buscarOuFalhar(id);

@@ -8,11 +8,14 @@ import br.com.lojagenerica.core.produto.Produto;
 import br.com.lojagenerica.core.produto.Produto.StatusProduto;
 import br.com.lojagenerica.core.produto.ProdutoRepository;
 import br.com.lojagenerica.core.produto.ProdutoService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * R$10,00 pra R$10,00 toda vez que alguém salva uma edição de descrição.
  */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('PRODUTO_LER')")
 public class ProdutoGestaoController {
 
@@ -72,7 +76,7 @@ public class ProdutoGestaoController {
 
     @PostMapping("/gestao/produtos")
     @PreAuthorize("hasAuthority('PRODUTO_ESCREVER')")
-    public String criar(@RequestParam String nome, @RequestParam Long unidadeEstoqueId,
+    public String criar(@RequestParam @NotBlank String nome, @RequestParam @NotNull Long unidadeEstoqueId,
                          @RequestParam(required = false) String codigoInterno,
                          @RequestParam(required = false) String descricao,
                          @RequestParam(required = false) BigDecimal precoVenda,
@@ -100,7 +104,8 @@ public class ProdutoGestaoController {
 
     @PostMapping("/gestao/produtos/{id}")
     @PreAuthorize("hasAuthority('PRODUTO_ESCREVER')")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome, @RequestParam Long unidadeEstoqueId,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
+                             @RequestParam @NotNull Long unidadeEstoqueId,
                              @RequestParam(required = false) String codigoInterno,
                              @RequestParam(required = false) String descricao,
                              @RequestParam(required = false) BigDecimal precoVenda,

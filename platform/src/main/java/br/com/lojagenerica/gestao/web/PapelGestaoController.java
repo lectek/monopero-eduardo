@@ -4,6 +4,7 @@ import br.com.lojagenerica.core.acesso.Papel;
 import br.com.lojagenerica.core.acesso.PapelRepository;
 import br.com.lojagenerica.core.acesso.PermissaoCatalogo;
 import br.com.lojagenerica.core.acesso.PermissaoRepository;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * autobloquear removendo a própria permissão de gerenciar usuários.
  */
 @Controller
+@Validated
 @PreAuthorize("hasAuthority('USUARIO_GERENCIAR')")
 public class PapelGestaoController {
 
@@ -62,7 +65,7 @@ public class PapelGestaoController {
     }
 
     @PostMapping("/gestao/papeis")
-    public String criar(@RequestParam String nome, @RequestParam(required = false) String descricao,
+    public String criar(@RequestParam @NotBlank String nome, @RequestParam(required = false) String descricao,
                          @RequestParam(required = false) List<String> permissoes) {
         Papel papel = new Papel(nome, descricao, false);
         aplicarPermissoes(papel, permissoes);
@@ -71,7 +74,7 @@ public class PapelGestaoController {
     }
 
     @PostMapping("/gestao/papeis/{id}")
-    public String atualizar(@PathVariable Long id, @RequestParam String nome,
+    public String atualizar(@PathVariable Long id, @RequestParam @NotBlank String nome,
                              @RequestParam(required = false) String descricao,
                              @RequestParam(required = false) List<String> permissoes) {
         Papel papel = buscarComPermissoesOuFalhar(id);

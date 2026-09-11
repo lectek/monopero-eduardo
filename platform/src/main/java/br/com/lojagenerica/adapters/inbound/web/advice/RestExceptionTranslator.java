@@ -3,6 +3,7 @@ package br.com.lojagenerica.adapters.inbound.web.advice;
 import br.com.lojagenerica.adapters.inbound.web.dto.ProblemDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -14,6 +15,24 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class RestExceptionTranslator {
+
+    /**
+     * Sem isto, uma negação de {@code @PreAuthorize} (usuário autenticado
+     * mas sem a permissão exigida) caía direto no handler genérico de
+     * {@code Exception} abaixo e virava HTTP 500 — escondendo que o
+     * pedido foi corretamente negado atrás de um "erro interno", em
+     * qualquer endpoint de {@code /api/v1/**} da aplicação inteira.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetails> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
+        ProblemDetails body = new ProblemDetails();
+        body.setStatus(HttpStatus.FORBIDDEN.value());
+        body.setError("Acesso negado");
+        body.setMessage("Você não tem permissão pra executar esta ação.");
+        body.setPath(req.getRequestURI());
+        body.setTimestamp(Instant.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetails> handleIllegalArgument(IllegalArgumentException ex,
