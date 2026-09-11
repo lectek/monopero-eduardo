@@ -1,9 +1,12 @@
 package br.com.lojagenerica.adapters.inbound.web.security;
 
+import br.com.lojagenerica.adapters.inbound.web.security.customer.CustomerUserDetailsService;
 import br.com.lojagenerica.adapters.inbound.web.security.customer.GoogleOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,7 +41,26 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Explícito (não deixado pro Spring Boot auto-configurar a partir de
+     * {@code CustomerUserDetailsService}): assim que qualquer outro
+     * {@code AuthenticationProvider} passa a existir no contexto (ver
+     * {@code AdminAuthenticationProvider}, pra {@code /gestao/**}), o
+     * Boot para de auto-conectar {@code UserDetailsService}s ao
+     * {@code AuthenticationManager} global — sem este bean, login de
+     * cliente (formLogin aqui embaixo) simplesmente para de autenticar
+     * ninguém, silenciosamente.
+     */
     @Bean
+    public DaoAuthenticationProvider customerAuthenticationProvider(
+            CustomerUserDetailsService customerUserDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(passwordEncoder);
+        provider.setUserDetailsService(customerUserDetailsService);
+        return provider;
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/webhooks/**"))

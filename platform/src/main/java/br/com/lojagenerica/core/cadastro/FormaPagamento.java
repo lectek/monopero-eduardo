@@ -60,12 +60,24 @@ public class FormaPagamento {
         return nome;
     }
 
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
     public NaturezaFormaPagamento getNatureza() {
         return natureza;
     }
 
+    public void setNatureza(NaturezaFormaPagamento natureza) {
+        this.natureza = natureza;
+    }
+
     public boolean isAfetaCaixa() {
         return afetaCaixa;
+    }
+
+    public void setAfetaCaixa(boolean afetaCaixa) {
+        this.afetaCaixa = afetaCaixa;
     }
 
     public boolean isPermiteParcelamento() {

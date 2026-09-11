@@ -72,6 +72,10 @@ public class TipoMovimentacao {
         return nome;
     }
 
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
     public SentidoMovimentacao getSentido() {
         return sentido;
     }
@@ -84,8 +88,16 @@ public class TipoMovimentacao {
         return exigeMotivo;
     }
 
+    public void setExigeMotivo(boolean exigeMotivo) {
+        this.exigeMotivo = exigeMotivo;
+    }
+
     public boolean isAfetaCustoMedio() {
         return afetaCustoMedio;
+    }
+
+    public void setAfetaCustoMedio(boolean afetaCustoMedio) {
+        this.afetaCustoMedio = afetaCustoMedio;
     }
 
     public boolean isAtivo() {

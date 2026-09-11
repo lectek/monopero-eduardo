@@ -49,16 +49,32 @@ public class UnidadeMedida {
         return codigo;
     }
 
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
+    }
+
     public String getDescricao() {
         return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
     }
 
     public short getCasasDecimais() {
         return casasDecimais;
     }
 
+    public void setCasasDecimais(short casasDecimais) {
+        this.casasDecimais = casasDecimais;
+    }
+
     public boolean isFracionavel() {
         return fracionavel;
+    }
+
+    public void setFracionavel(boolean fracionavel) {
+        this.fracionavel = fracionavel;
     }
 
     public boolean isAtivo() {

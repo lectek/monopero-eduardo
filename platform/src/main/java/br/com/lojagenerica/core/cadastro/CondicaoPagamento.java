@@ -49,12 +49,24 @@ public class CondicaoPagamento {
         return nome;
     }
 
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
     public short getParcelas() {
         return parcelas;
     }
 
+    public void setParcelas(short parcelas) {
+        this.parcelas = parcelas;
+    }
+
     public int getIntervaloDias() {
         return intervaloDias;
+    }
+
+    public void setIntervaloDias(int intervaloDias) {
+        this.intervaloDias = intervaloDias;
     }
 
     public BigDecimal getEntradaPercentual() {

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marcas — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Marcas</h1>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/marcas/novo}">Nova marca</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>Fabricante</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="marca : ${marcas}">
+          <td th:text="${marca.nome}"></td>
+          <td th:text="${marca.fabricante}"></td>
+          <td th:text="${marca.ativo} ? 'Ativa' : 'Inativa'"></td>
+          <td>
+            <a class="btn btn--sm btn--ghost" th:href="@{/gestao/marcas/{id}/editar(id=${marca.id})}">Editar</a>
+            <form th:action="@{/gestao/marcas/{id}/alternar-ativo(id=${marca.id})}" method="post" style="display:inline;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="ativo" th:value="${!marca.ativo}" />
+              <button class="btn btn--sm btn--ghost" type="submit" th:text="${marca.ativo} ? 'Desativar' : 'Ativar'"></button>
+            </form>
+          </td>
+        </tr>
+        <tr th:if="${marcas.isEmpty()}">
+          <td colspan="4">Nenhuma marca cadastrada ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
