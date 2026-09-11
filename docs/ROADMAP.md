@@ -23,39 +23,47 @@ resto de verdade; 3 em diante é o que falta pra fechar a Fase D.
    → registrar uma venda → conferir que ela aparece no servidor. Qualquer
    problema de layout/usabilidade só aparece aqui.
 
-2. **UI web de administração — 🔄 em andamento.** Todo o núcleo novo só
-   tinha API REST até aqui; não havia tela nenhuma pra cadastrar nada.
-   Construído: segunda `SecurityFilterChain` (`br.com.lojagenerica.security.admin`,
-   sessão própria em `/gestao/**`, login contra `core.acesso.Usuario`
-   reusando `IdentidadeService`, `AdminTenantSessionFilter` religando o
-   `TenantContext` a partir do schema guardado na sessão) + CRUD completo
-   (listar/criar/editar/ativar-desativar) de **6 dos 8 cadastros**: marca,
-   unidade de medida, forma de pagamento, local de estoque, condição de
-   pagamento, tipo de movimentação (este último com proteção extra:
-   linhas `sistema=true` como VENDA/COMPRA não podem ser editadas nem
-   desativadas, nem por URL direta). 7 testes MockMvc cobrindo login +
-   cada cadastro.
+2. **UI web de administração — 🔄 em andamento, núcleo funcional.** Todo
+   o núcleo novo só tinha API REST até aqui; não havia tela nenhuma pra
+   cadastrar nada. Construído: segunda `SecurityFilterChain`
+   (`br.com.lojagenerica.security.admin`, sessão própria em `/gestao/**`,
+   login contra `core.acesso.Usuario` reusando `IdentidadeService`,
+   `AdminTenantSessionFilter` religando o `TenantContext` a partir do
+   schema guardado na sessão) + CRUD completo (listar/criar/editar/
+   ativar-desativar) de **6 dos 8 cadastros** (marca, unidade de medida,
+   forma de pagamento, local de estoque, condição de pagamento, tipo de
+   movimentação — este último com proteção extra pras linhas
+   `sistema=true`) + **produto** (preço/custo passam por
+   `ProdutoService.alterarPreco`, nunca `set` direto — só chamado quando
+   o valor muda de verdade, pra não poluir o histórico) + **papéis e
+   usuários** (`UsuarioGestaoService` escreve nos dois schemas que criar
+   um funcionário exige — `core.acesso.Usuario` no tenant e
+   `plataforma.identidade_usuario` no controle — sem isso só o dono
+   criado no provisionamento conseguia logar). 12 classes de teste
+   MockMvc cobrindo login + cada tela; a mais importante
+   (`UsuarioGestaoFlowIT`) cria um usuário pela tela e loga com ele de
+   verdade numa sessão própria.
    **Faltam**: categoria (hierárquica, precisa de `CategoriaService` pra
    calcular caminho materializado — `Categoria` não tem setter de
    categoria-pai ainda), conversão de unidade (par de unidades + produto
    opcional) e definição de atributo (categoria opcional + enum tipo +
    JSON de opções) — cada uma com uma relação própria, não o mesmo CRUD
-   chapado dos 6 já feitos. Depois: tela de produto (a mais importante —
-   preço/custo têm histórico auditado, não é `set` direto) e de usuários/
-   papéis (permissão fina).
-   **Achado no caminho**: a tabela `customers` (login do cliente da
-   loja online) não existe em NENHUMA migration Flyway nova — a Fase 0
-   deletou o `SchemaInitializer` sem portar essa tabela. Login de cliente
-   (`/login`, storefront) está quebrado hoje contra Postgres,
-   independente de qualquer mudança feita aqui; also corrigido de
-   passagem um bug real: registrar `AdminAuthenticationProvider` como
-   bean fazia o Spring Boot parar de autoconectar
-   `CustomerUserDetailsService` ao `AuthenticationManager` global — sem
-   `SecurityConfig.customerAuthenticationProvider`, o login de cliente
-   pararia de autenticar ninguém assim que a tabela existisse, em
-   silêncio. Portar `customers` pro Postgres fica fora de escopo aqui
-   (é o mesmo problema maior do storefront ainda não multi-tenant, ver
-   Fase I) — só não deve ser esquecido.
+   chapado das outras 8 já feitas.
+   **Achados no caminho, ambos corrigidos**: (1) registrar
+   `AdminAuthenticationProvider` como bean fazia o Spring Boot parar de
+   autoconectar `CustomerUserDetailsService` ao `AuthenticationManager`
+   global — sem `SecurityConfig.customerAuthenticationProvider`, login
+   de cliente pararia de autenticar ninguém, em silêncio; (2)
+   `AdminAuthenticationProvider` nunca checava `usuario.isAtivo()`
+   (ao contrário de `AuthController`) — um usuário desativado continuava
+   conseguindo logar em `/gestao/**`.
+   **Achado no caminho, NÃO corrigido (fora de escopo aqui)**: a tabela
+   `customers` (login do cliente da loja online) não existe em NENHUMA
+   migration Flyway nova — a Fase 0 deletou o `SchemaInitializer` sem
+   portar essa tabela. Login de cliente (`/login`, storefront) está
+   quebrado hoje contra Postgres, independente de qualquer mudança feita
+   aqui — é o mesmo problema maior do storefront ainda não multi-tenant
+   (ver Fase I). Só não deve ser esquecido.
 
 3. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
    null, o que trava desconto (`VendaService.validarDesconto` exige
