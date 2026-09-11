@@ -11,97 +11,85 @@ critério de saída (como saber que a fase terminou de verdade).
 
 ## 📍 Próximos passos (ordem de prioridade)
 
-Lista viva — atualizada a cada corte de trabalho. Itens 1-2 bloqueiam o
-resto de verdade; 3 em diante é o que falta pra fechar a Fase D.
+Lista viva — atualizada a cada corte de trabalho. Reordenada agora que a
+UI web de administração tem um núcleo funcional (8 telas, 26 classes de
+IT verdes): os itens que dependiam dela (login de operador no PDV, por
+exemplo, agora tem um `UsuarioGestaoService` de verdade pra se apoiar)
+sobem de prioridade; os 3 cadastros que faltavam (categoria, conversão de
+unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
 
-1. **Teste manual do cliente PDV numa máquina real com display** (ação do
-   usuário/Eduardo, não automatizável nesta sessão). `TelaPareamento` e
-   `VendaScreen` só foram compiladas e revisadas — ninguém clicou nelas
-   ainda. Rodar `mvn exec:java -Dexec.mainClass=br.com.lojagenerica.pdvclient.App`
-   num Windows/Linux com monitor, contra um servidor local (`docker compose
-   up` no `platform/`), e percorrer: parear terminal → sincronizar catálogo
-   → registrar uma venda → conferir que ela aparece no servidor. Qualquer
-   problema de layout/usabilidade só aparece aqui.
+1. **Teste manual numa máquina real com display** (ação do
+   usuário/Eduardo, não automatizável nesta sessão) — cobre as DUAS
+   frentes de UI construídas às cegas até aqui:
+   - Cliente PDV (`TelaPareamento`/`VendaScreen`): rodar
+     `mvn exec:java -Dexec.mainClass=br.com.lojagenerica.pdvclient.App`,
+     parear terminal → sincronizar catálogo → registrar uma venda →
+     conferir que ela aparece no servidor.
+   - UI web `/gestao/**`: subir o `platform/` (`docker compose up`),
+     logar com o dono, percorrer cada tela (produtos, cadastros,
+     usuários/papéis) — nenhuma foi vista num navegador real ainda,
+     só testada via MockMvc.
+   Qualquer problema de layout/usabilidade só aparece aqui.
 
-2. **UI web de administração — 🔄 em andamento, núcleo funcional.** Todo
-   o núcleo novo só tinha API REST até aqui; não havia tela nenhuma pra
-   cadastrar nada. Construído: segunda `SecurityFilterChain`
-   (`br.com.lojagenerica.security.admin`, sessão própria em `/gestao/**`,
-   login contra `core.acesso.Usuario` reusando `IdentidadeService`,
-   `AdminTenantSessionFilter` religando o `TenantContext` a partir do
-   schema guardado na sessão) + CRUD completo (listar/criar/editar/
-   ativar-desativar) de **6 dos 8 cadastros** (marca, unidade de medida,
-   forma de pagamento, local de estoque, condição de pagamento, tipo de
-   movimentação — este último com proteção extra pras linhas
-   `sistema=true`) + **produto** (preço/custo passam por
-   `ProdutoService.alterarPreco`, nunca `set` direto — só chamado quando
-   o valor muda de verdade, pra não poluir o histórico) + **papéis e
-   usuários** (`UsuarioGestaoService` escreve nos dois schemas que criar
-   um funcionário exige — `core.acesso.Usuario` no tenant e
-   `plataforma.identidade_usuario` no controle — sem isso só o dono
-   criado no provisionamento conseguia logar). 12 classes de teste
-   MockMvc cobrindo login + cada tela; a mais importante
-   (`UsuarioGestaoFlowIT`) cria um usuário pela tela e loga com ele de
-   verdade numa sessão própria.
-   **Faltam**: categoria (hierárquica, precisa de `CategoriaService` pra
-   calcular caminho materializado — `Categoria` não tem setter de
-   categoria-pai ainda), conversão de unidade (par de unidades + produto
-   opcional) e definição de atributo (categoria opcional + enum tipo +
-   JSON de opções) — cada uma com uma relação própria, não o mesmo CRUD
-   chapado das outras 8 já feitas.
-   **Achados no caminho, ambos corrigidos**: (1) registrar
-   `AdminAuthenticationProvider` como bean fazia o Spring Boot parar de
-   autoconectar `CustomerUserDetailsService` ao `AuthenticationManager`
-   global — sem `SecurityConfig.customerAuthenticationProvider`, login
-   de cliente pararia de autenticar ninguém, em silêncio; (2)
-   `AdminAuthenticationProvider` nunca checava `usuario.isAtivo()`
-   (ao contrário de `AuthController`) — um usuário desativado continuava
-   conseguindo logar em `/gestao/**`.
-   **Achado no caminho, NÃO corrigido (fora de escopo aqui)**: a tabela
-   `customers` (login do cliente da loja online) não existe em NENHUMA
-   migration Flyway nova — a Fase 0 deletou o `SchemaInitializer` sem
-   portar essa tabela. Login de cliente (`/login`, storefront) está
-   quebrado hoje contra Postgres, independente de qualquer mudança feita
-   aqui — é o mesmo problema maior do storefront ainda não multi-tenant
-   (ver Fase I). Só não deve ser esquecido.
-
-3. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
+2. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
    null, o que trava desconto (`VendaService.validarDesconto` exige
-   e-mail resolvível) e a atribuição "vendido por" que os relatórios/
-   auditoria vão precisar. Precisa de: recurso novo de sync
-   `usuario` (servidor: `UsuarioSyncDTO` + `PdvSyncService`, cliente:
-   `cache_usuario` com senha em bcrypt cacheada — mesmo hash que o
-   servidor usa, então funciona offline), tela de login simples antes de
-   abrir `VendaScreen`, e passar o `usuarioId` autenticado pro
-   `VendaLocalDao.registrarVenda` (hoje hardcoded `null` em `App`).
+   e-mail resolvível) e a atribuição "vendido por". Ganhou prioridade
+   porque `UsuarioGestaoService` (item "UI web", abaixo) já existe pra
+   criar de fato os funcionários que vão logar no caixa. Precisa de:
+   recurso novo de sync `usuario` (servidor: `UsuarioSyncDTO` +
+   `PdvSyncService`, cliente: `cache_usuario` com senha em bcrypt
+   cacheada — mesmo hash do servidor, funciona offline), tela de login
+   simples antes de abrir `VendaScreen`, e passar o `usuarioId`
+   autenticado pro `VendaLocalDao.registrarVenda` (hoje hardcoded `null`
+   em `App`).
 
-4. **AjusteEstoqueScreen** (substitui `Dispatch.java`) — dá baixa/entrada
-   manual de estoque com motivo obrigatório, online-only ou via outbox
-   com um `TipoEventoPdv` novo (`AJUSTE_ESTOQUE`) espelhando o padrão de
-   `VENDA_REGISTRADA`/`VENDA_CANCELADA` (servidor + cliente, os dois
-   lados).
+3. **AjusteEstoqueScreen** (substitui `Dispatch.java`) — dá baixa/entrada
+   manual de estoque com motivo obrigatório, via outbox com um
+   `TipoEventoPdv` novo (`AJUSTE_ESTOQUE`) espelhando o padrão de
+   `VENDA_REGISTRADA`/`VENDA_CANCELADA` (servidor + cliente).
 
-5. **Recibo** — `Receipt.java` (legado) foi desenhado pro modelo
+4. **Recibo** — `Receipt.java` (legado) foi desenhado pro modelo
    nome+cor+peso; adaptar pra imprimir `ItemVendaLocal` genérico
    (produto+quantidade+preço, sem cor/peso) e plugar em
    `VendaScreen.confirmarVenda`.
 
-6. **Pix repontado pro servidor** — hoje `MercadoPagoPixClient`/
+5. **Pix repontado pro servidor** — hoje `MercadoPagoPixClient`/
    `PixPaymentDialog` (legado) criam a cobrança direto do caixa, com o
-   token do Mercado Pago em texto no `config.properties` da loja (o que
-   a Fase D existe pra eliminar). O servidor já sabe criar cobrança Pix
-   pro canal online (`MercadoPagoCheckoutService`), mas não existe ainda
-   um endpoint equivalente pro canal PDV — precisa entrar em
-   `pdv.web` antes de repontar essas duas telas.
+   token do Mercado Pago em texto no `config.properties` da loja. O
+   servidor já sabe criar cobrança Pix pro canal online
+   (`MercadoPagoCheckoutService`), mas falta o equivalente pro canal PDV
+   em `pdv.web`.
 
-7. **Relatórios locais** — adaptar `Stock.java`/`SalesReport.java`/
-   `SalesCalendar.java` pra ler de `cache_produto`/`venda_local` em vez
-   do SQLite antigo.
+6. **Relatórios locais do PDV** — adaptar `Stock.java`/`SalesReport.java`/
+   `SalesCalendar.java` pra ler de `cache_produto`/`venda_local`.
 
-8. **Limpeza final**: deletar `Production.java`/`ModifyProducts.java`/
-   `AdminSaas.java` (funcionalidade migra pra UI web do item 2), upgrade
-   `jpackage` no `pom.xml`, cortar o `mainClass` do assembly de
-   `mysquare.core.IMStart` pro `br.com.lojagenerica.pdvclient.App`.
+7. **UI web — os 3 cadastros que faltam** (categoria hierárquica,
+   conversão de unidade, definição de atributo) — rebaixados porque
+   nenhum bloqueia uso diário (produto não exige categoria). Categoria
+   precisa de um `CategoriaService` pra calcular caminho materializado
+   (`Categoria` não tem setter de categoria-pai ainda) antes de ter
+   tela; conversão de unidade tem par de unidades + produto opcional;
+   atributo tem categoria opcional + enum tipo + JSON de opções — cada
+   uma com uma relação própria, não o mesmo CRUD chapado das outras 8
+   já feitas (marca, unidade de medida, forma de pagamento, local de
+   estoque, condição de pagamento, tipo de movimentação, produto,
+   papéis+usuários — essas com sessão própria em `/gestao/**`, login
+   contra `core.acesso.Usuario`, 12 classes de teste MockMvc, incluindo
+   uma que cria um usuário pela tela e loga com ele de verdade).
+   Achados corrigidos no caminho: `AdminAuthenticationProvider` como
+   bean tirava `CustomerUserDetailsService` do `AuthenticationManager`
+   global (login de cliente pararia de funcionar, em silêncio) e nunca
+   checava `usuario.isAtivo()` (usuário desativado conseguia logar
+   mesmo assim) — os dois corrigidos e testados. Achado NÃO corrigido:
+   a tabela `customers` não existe em nenhuma migration Flyway nova —
+   login de cliente (`/login`, storefront) está quebrado hoje contra
+   Postgres, independente disso — é o mesmo problema do storefront
+   ainda não multi-tenant (ver Fase I).
+
+8. **Limpeza final do PDV**: deletar `Production.java`/
+   `ModifyProducts.java`/`AdminSaas.java` (função migra pra UI web,
+   já pronta), upgrade `jpackage`, cortar `mainClass` do assembly de
+   `mysquare.core.IMStart` pro `App` novo.
 
 Depois que a Fase D fechar (critério de saída no corpo da fase, abaixo):
 Fase E (Financeiro) → F (Orçamentos/Devoluções) → G (Funcionários/
