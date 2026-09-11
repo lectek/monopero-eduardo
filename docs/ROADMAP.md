@@ -91,6 +91,42 @@ unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
    já pronta), upgrade `jpackage`, cortar `mainClass` do assembly de
    `mysquare.core.IMStart` pro `App` novo.
 
+## 🔧 Refino da UI web (rodada "aprimorar e refinar")
+
+Pedido explícito do usuário pra revisar qualidade antes de continuar
+construindo. Um agente de exploração levantou 6 gaps concretos nos 9
+controllers de `/gestao/**`; os 2 de maior impacto (robustez) já foram
+corrigidos e testados:
+
+- ✅ **Validação de entrada**: `@Validated` + `@NotBlank`/`@Email`/
+  `@Size`/`@Min` nos 9 controllers — nome vazio não salva mais
+  silenciosamente.
+- ✅ **Erros amigáveis**: `GestaoExceptionHandler` novo
+  (`@ControllerAdvice` escopado + `@Order(HIGHEST_PRECEDENCE)`) —
+  editar um id inexistente ou salvar um nome duplicado mostra uma
+  página HTML com a mensagem certa, não mais JSON cru com HTTP 500.
+- ✅ **Bug de segurança real, achado no processo, afetando a
+  aplicação inteira**: `@PreAuthorize` negando acesso (usuário
+  autenticado sem a permissão exigida) não tinha handler em
+  `RestExceptionTranslator` e virava **HTTP 500 em vez de 403 em
+  qualquer endpoint de `/api/v1/**`**, desde sempre — nenhum teste
+  antes desta rodada usava um usuário com permissão restrita (todos
+  usavam ADMINISTRADOR). Corrigido nos dois lados (API e `/gestao/**`)
+  e coberto por teste em ambos.
+
+**Ainda não atacados** (menu apresentado ao usuário, que escolheu
+robustez primeiro — os outros 3 seguem disponíveis pra quando fizer
+sentido continuar o refino):
+- **Consistência**: `ProdutoGestaoController` mistura `@PreAuthorize`
+  de classe+método; os outros 8 controllers são só de classe — um
+  endpoint novo em `ProdutoGestaoController` sem anotação própria cai
+  no nível de classe (mais permissivo), risco que os outros 8 não têm.
+- **Escala**: nenhuma tela pagina (`findAll()` sem limite) — não é
+  problema com o volume de dados de hoje, mas travaria com milhares de
+  linhas.
+- **UX**: nenhuma mensagem de sucesso após salvar (só redirect
+  silencioso); nenhuma confirmação antes de desativar um registro.
+
 Depois que a Fase D fechar (critério de saída no corpo da fase, abaixo):
 Fase E (Financeiro) → F (Orçamentos/Devoluções) → G (Funcionários/
 Permissões, UI de gestão fina) → H (Custos/Relatórios/Dashboard) → I
