@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tipos de movimentação — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Tipos de movimentação</h1>
+    <p class="mb-16">Linhas de sistema (VENDA, COMPRA, DEVOLUÇÃO, INVENTÁRIO, TRANSFERÊNCIA) não podem ser
+      editadas nem desativadas aqui — o próprio software depende delas por código.</p>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/tipos-movimentacao/novo}">Novo tipo</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Código</th><th>Nome</th><th>Sentido</th><th>Exige motivo</th><th>Origem</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="tipo : ${tipos}">
+          <td th:text="${tipo.codigo}"></td>
+          <td th:text="${tipo.nome}"></td>
+          <td th:text="${tipo.sentido}"></td>
+          <td th:text="${tipo.exigeMotivo} ? 'Sim' : 'Não'"></td>
+          <td th:text="${tipo.sistema} ? 'Sistema' : 'Livre'"></td>
+          <td th:text="${tipo.ativo} ? 'Ativo' : 'Inativo'"></td>
+          <td>
+            <span th:unless="${tipo.sistema}">
+              <a class="btn btn--sm btn--ghost" th:href="@{/gestao/tipos-movimentacao/{id}/editar(id=${tipo.id})}">Editar</a>
+              <form th:action="@{/gestao/tipos-movimentacao/{id}/alternar-ativo(id=${tipo.id})}" method="post" style="display:inline;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="ativo" th:value="${!tipo.ativo}" />
+                <button class="btn btn--sm btn--ghost" type="submit" th:text="${tipo.ativo} ? 'Desativar' : 'Ativar'"></button>
+              </form>
+            </span>
+          </td>
+        </tr>
+        <tr th:if="${tipos.isEmpty()}">
+          <td colspan="7">Nenhum tipo de movimentação cadastrado ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tipos de movimentação — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16" th:text="${tipo.id == null} ? 'Novo tipo de movimentação' : 'Editar tipo de movimentação'"></h1>
+    <form class="gestao-form stack gap-16"
+          th:action="${tipo.id == null} ? @{/gestao/tipos-movimentacao} : @{/gestao/tipos-movimentacao/{id}(id=${tipo.id})}"
+          method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+      <div class="form-group">
+        <label for="codigo">Código (estável — não pode ser alterado depois de criado)</label>
+        <input class="input" id="codigo" name="codigo" th:value="${tipo.codigo}"
+               th:readonly="${tipo.id != null}" required autofocus="autofocus" />
+      </div>
+      <div class="form-group">
+        <label for="nome">Nome</label>
+        <input class="input" id="nome" name="nome" th:value="${tipo.nome}" required />
+      </div>
+      <div class="form-group">
+        <label for="sentido">Sentido (não pode ser alterado depois de criado)</label>
+        <select class="input" id="sentido" name="sentido" th:disabled="${tipo.id != null}">
+          <option th:each="s : ${sentidos}" th:value="${s}" th:text="${s}" th:selected="${s == tipo.sentido}"></option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label><input type="checkbox" name="exigeMotivo" value="true" th:checked="${tipo.exigeMotivo}" /> Exige motivo ao usar</label>
+      </div>
+      <div class="form-group">
+        <label><input type="checkbox" name="afetaCustoMedio" value="true" th:checked="${tipo.afetaCustoMedio}" /> Afeta o custo médio do produto</label>
+      </div>
+      <div class="form-group" th:if="${tipo.id != null}">
+        <label><input type="checkbox" name="ativo" value="true" th:checked="${tipo.ativo}" /> Ativo</label>
+      </div>
+      <div class="gestao-acoes">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <a class="btn btn--ghost" th:href="@{/gestao/tipos-movimentacao}">Cancelar</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

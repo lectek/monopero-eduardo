@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Formas de pagamento — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Formas de pagamento</h1>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/formas-pagamento/novo}">Nova forma de pagamento</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>Natureza</th><th>Afeta caixa</th><th>Parcelamento</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="forma : ${formas}">
+          <td th:text="${forma.nome}"></td>
+          <td th:text="${forma.natureza}"></td>
+          <td th:text="${forma.afetaCaixa} ? 'Sim' : 'Não'"></td>
+          <td th:text="${forma.permiteParcelamento} ? ('Até ' + ${forma.maxParcelas}) : 'Não'"></td>
+          <td th:text="${forma.ativo} ? 'Ativa' : 'Inativa'"></td>
+          <td>
+            <a class="btn btn--sm btn--ghost" th:href="@{/gestao/formas-pagamento/{id}/editar(id=${forma.id})}">Editar</a>
+            <form th:action="@{/gestao/formas-pagamento/{id}/alternar-ativo(id=${forma.id})}" method="post" style="display:inline;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="ativo" th:value="${!forma.ativo}" />
+              <button class="btn btn--sm btn--ghost" type="submit" th:text="${forma.ativo} ? 'Desativar' : 'Ativar'"></button>
+            </form>
+          </td>
+        </tr>
+        <tr th:if="${formas.isEmpty()}">
+          <td colspan="6">Nenhuma forma de pagamento cadastrada ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

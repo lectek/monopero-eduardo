@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Condições de pagamento — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Condições de pagamento</h1>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/condicoes-pagamento/novo}">Nova condição</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>Parcelas</th><th>Intervalo (dias)</th><th>Entrada (%)</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="condicao : ${condicoes}">
+          <td th:text="${condicao.nome}"></td>
+          <td th:text="${condicao.parcelas}"></td>
+          <td th:text="${condicao.intervaloDias}"></td>
+          <td th:text="${condicao.entradaPercentual}"></td>
+          <td th:text="${condicao.ativo} ? 'Ativa' : 'Inativa'"></td>
+          <td>
+            <a class="btn btn--sm btn--ghost" th:href="@{/gestao/condicoes-pagamento/{id}/editar(id=${condicao.id})}">Editar</a>
+            <form th:action="@{/gestao/condicoes-pagamento/{id}/alternar-ativo(id=${condicao.id})}" method="post" style="display:inline;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="ativo" th:value="${!condicao.ativo}" />
+              <button class="btn btn--sm btn--ghost" type="submit" th:text="${condicao.ativo} ? 'Desativar' : 'Ativar'"></button>
+            </form>
+          </td>
+        </tr>
+        <tr th:if="${condicoes.isEmpty()}">
+          <td colspan="6">Nenhuma condição de pagamento cadastrada ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

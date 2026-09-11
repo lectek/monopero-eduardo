@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Locais de estoque — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Locais de estoque</h1>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/locais-estoque/novo}">Novo local</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>Tipo</th><th>Principal</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="local : ${locais}">
+          <td th:text="${local.nome}"></td>
+          <td th:text="${local.tipo}"></td>
+          <td th:text="${local.principal} ? 'Sim' : 'Não'"></td>
+          <td th:text="${local.ativo} ? 'Ativo' : 'Inativo'"></td>
+          <td>
+            <a class="btn btn--sm btn--ghost" th:href="@{/gestao/locais-estoque/{id}/editar(id=${local.id})}">Editar</a>
+            <form th:action="@{/gestao/locais-estoque/{id}/alternar-ativo(id=${local.id})}" method="post" style="display:inline;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="ativo" th:value="${!local.ativo}" />
+              <button class="btn btn--sm btn--ghost" type="submit" th:text="${local.ativo} ? 'Desativar' : 'Ativar'"></button>
+            </form>
+          </td>
+        </tr>
+        <tr th:if="${locais.isEmpty()}">
+          <td colspan="5">Nenhum local de estoque cadastrado ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
