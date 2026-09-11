@@ -23,21 +23,39 @@ resto de verdade; 3 em diante é o que falta pra fechar a Fase D.
    → registrar uma venda → conferir que ela aparece no servidor. Qualquer
    problema de layout/usabilidade só aparece aqui.
 
-2. **UI web de administração — hoje não existe nenhuma.** Todo o núcleo
-   novo (`core.produto`, `core.cadastro`, `core.compra`, `core.venda`,
-   `core.acesso` etc.) só tem API REST (`/api/v1/**`); não há tela
-   nenhuma pra cadastrar categoria/produto/forma de pagamento/local de
-   estoque/usuário. Isso bloqueia o uso real do sistema — mesmo com o
-   PDV 100% pronto, não há como popular os cadastros que ele sincroniza,
-   a não ser via `curl`/Postman. Esse gap não estava explícito nas fases
-   originais (A-I assumiam "UI de gestão" só na Fase G, pra
-   papel/permissão especificamente) e precisa de uma decisão: um
-   frontend novo (SPA ou Thymeleaf, dentro de `platform/` mesmo) que
-   cubra pelo menos os 8 cadastros + produto + usuários, ou aceitar
-   Postman/curl como ferramenta de operação por enquanto. Recomendação:
-   uma tela mínima de CRUD genérico (uma grade por cadastro) entra
-   **antes** de terminar as telas do PDV que dependem desses dados
-   existirem de verdade.
+2. **UI web de administração — 🔄 em andamento.** Todo o núcleo novo só
+   tinha API REST até aqui; não havia tela nenhuma pra cadastrar nada.
+   Construído: segunda `SecurityFilterChain` (`br.com.lojagenerica.security.admin`,
+   sessão própria em `/gestao/**`, login contra `core.acesso.Usuario`
+   reusando `IdentidadeService`, `AdminTenantSessionFilter` religando o
+   `TenantContext` a partir do schema guardado na sessão) + CRUD completo
+   (listar/criar/editar/ativar-desativar) de **6 dos 8 cadastros**: marca,
+   unidade de medida, forma de pagamento, local de estoque, condição de
+   pagamento, tipo de movimentação (este último com proteção extra:
+   linhas `sistema=true` como VENDA/COMPRA não podem ser editadas nem
+   desativadas, nem por URL direta). 7 testes MockMvc cobrindo login +
+   cada cadastro.
+   **Faltam**: categoria (hierárquica, precisa de `CategoriaService` pra
+   calcular caminho materializado — `Categoria` não tem setter de
+   categoria-pai ainda), conversão de unidade (par de unidades + produto
+   opcional) e definição de atributo (categoria opcional + enum tipo +
+   JSON de opções) — cada uma com uma relação própria, não o mesmo CRUD
+   chapado dos 6 já feitos. Depois: tela de produto (a mais importante —
+   preço/custo têm histórico auditado, não é `set` direto) e de usuários/
+   papéis (permissão fina).
+   **Achado no caminho**: a tabela `customers` (login do cliente da
+   loja online) não existe em NENHUMA migration Flyway nova — a Fase 0
+   deletou o `SchemaInitializer` sem portar essa tabela. Login de cliente
+   (`/login`, storefront) está quebrado hoje contra Postgres,
+   independente de qualquer mudança feita aqui; also corrigido de
+   passagem um bug real: registrar `AdminAuthenticationProvider` como
+   bean fazia o Spring Boot parar de autoconectar
+   `CustomerUserDetailsService` ao `AuthenticationManager` global — sem
+   `SecurityConfig.customerAuthenticationProvider`, o login de cliente
+   pararia de autenticar ninguém assim que a tabela existisse, em
+   silêncio. Portar `customers` pro Postgres fica fora de escopo aqui
+   (é o mesmo problema maior do storefront ainda não multi-tenant, ver
+   Fase I) — só não deve ser esquecido.
 
 3. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
    null, o que trava desconto (`VendaService.validarDesconto` exige
