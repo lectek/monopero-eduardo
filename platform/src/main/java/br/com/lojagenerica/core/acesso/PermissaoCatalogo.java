@@ -36,7 +36,10 @@ public enum PermissaoCatalogo {
 
     USUARIO_GERENCIAR("ACESSO", "Criar/editar usuários, papéis e permissões deste tenant"),
 
-    TERMINAL_GERENCIAR("PDV", "Parear/desativar terminais de PDV");
+    TERMINAL_GERENCIAR("PDV", "Parear/desativar terminais de PDV"),
+
+    ENTREGA_GERENCIAR("ENTREGA", "Roteirizar vendas em entrega e acompanhar rotas"),
+    ENTREGA_EXECUTAR("ENTREGA", "Assumir e executar rotas de entrega como motoboy");
 
     private final String modulo;
     private final String descricao;

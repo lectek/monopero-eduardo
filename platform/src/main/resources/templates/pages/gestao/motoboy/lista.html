@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minhas rotas — Motoboy</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8" style="max-width:560px;">
+    <h1 class="text-lg font-semibold mb-16">Minhas rotas</h1>
+
+    <section class="mb-4">
+      <h2 class="text-base font-semibold mb-8">Rotas disponíveis pra assumir</h2>
+      <p th:if="${rotasDisponiveis.isEmpty()}">Nenhuma rota disponível no momento.</p>
+      <div th:each="rota : ${rotasDisponiveis}" class="card p-4 mb-4">
+        <p><strong th:text="'Rota #' + ${rota.id}"></strong> &nbsp; <span class="badge badge--neutral" th:text="${rota.status}"></span></p>
+        <p th:text="${rota.origem}"></p>
+        <p th:text="${rota.paradas.size()} + ' parada(s) — ' + (${rota.distanciaTotalKm} != null ? ${rota.distanciaTotalKm} + ' km' : '')"></p>
+        <a class="btn btn--primary" th:href="@{/gestao/motoboy/rotas/{id}(id=${rota.id})}">Ver e assumir</a>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold mb-8">Minhas rotas em andamento / concluídas</h2>
+      <p th:if="${minhasRotas.isEmpty()}">Você ainda não assumiu nenhuma rota.</p>
+      <a th:each="rota : ${minhasRotas}" class="card p-4 mb-4" th:href="@{/gestao/motoboy/rotas/{id}(id=${rota.id})}"
+         style="display:block;text-decoration:none;color:inherit;">
+        <p><strong th:text="'Rota #' + ${rota.id}"></strong> &nbsp; <span class="badge badge--neutral" th:text="${rota.status}"></span></p>
+        <p th:text="${rota.origem}"></p>
+      </a>
+    </section>
+  </main>
+</body>
+</html>

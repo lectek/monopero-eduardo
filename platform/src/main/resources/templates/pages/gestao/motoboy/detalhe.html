@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rota — Motoboy</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8" style="max-width:560px;">
+    <p><a th:href="@{/gestao/motoboy}">&larr; Minhas rotas</a></p>
+    <h1 class="text-lg font-semibold mb-8" th:text="'Rota #' + ${rota.id}"></h1>
+
+    <section class="card p-4 mb-4">
+      <p><span class="badge badge--neutral" th:text="${rota.status}"></span></p>
+      <p th:text="${rota.origem}"></p>
+      <p th:text="${rota.paradas.size()} + ' parada(s)'"></p>
+
+      <form th:if="${rota.status.name() == 'PLANEJADA'}" th:action="@{/gestao/motoboy/rotas/{id}/iniciar(id=${rota.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button class="btn btn--primary mt-4" type="submit">Iniciar rota</button>
+      </form>
+    </section>
+
+    <section class="card p-4 mb-4">
+      <h2 class="text-base font-semibold mb-8">Quanto você vai ganhar</h2>
+      <p><strong th:text="${ganho.percentualComissao}"></strong>% do frete de cada entrega.</p>
+      <p>Comissão já confirmada: <strong th:text="'R$ ' + ${ganho.comissaoConfirmada}"></strong></p>
+      <p>Comissão total prevista se completar a rota inteira: <strong th:text="'R$ ' + ${ganho.comissaoProjetadaTotal}"></strong></p>
+    </section>
+
+    <section class="card p-4" th:if="${proximaParada != null}">
+      <h2 class="text-base font-semibold mb-8">Sua parada agora</h2>
+      <p><strong th:text="${proximaParada.ordem} + '. ' + ${proximaParada.clienteNomeSnapshot}"></strong>
+        &nbsp; <span class="badge badge--neutral" th:text="${proximaParada.status}"></span></p>
+      <p th:text="${proximaParada.enderecoEntregaSnapshot}"></p>
+      <p>Código de entrega: <strong th:text="${proximaParada.codigoEntrega}"></strong></p>
+      <p>Frete desta entrega: <strong th:text="'R$ ' + ${proximaParada.valorFreteSnapshot}"></strong></p>
+
+      <form th:if="${proximaParada.status.name() == 'A_CAMINHO'}"
+            th:action="@{/gestao/motoboy/rotas/{id}/paradas/{paradaId}/chegada(id=${rota.id},paradaId=${proximaParada.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button class="btn btn--primary" type="submit">Cheguei</button>
+      </form>
+
+      <form th:if="${proximaParada.status.name() == 'CHEGOU'}" class="stack gap-8 mt-4"
+            th:action="@{/gestao/motoboy/rotas/{id}/paradas/{paradaId}/confirmar(id=${rota.id},paradaId=${proximaParada.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <select class="input" name="formaPagamentoRecebida">
+          <option value="">Como recebeu o pagamento? (se houver)</option>
+          <option value="Pix">Pix</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Cartão">Cartão</option>
+        </select>
+        <input class="input" type="number" name="avaliacaoEntrega" min="1" max="5" placeholder="Avaliação (1-5, opcional)" />
+        <input class="input" name="observacao" placeholder="Observação (opcional)" />
+        <button class="btn btn--primary" type="submit">Confirmar entrega</button>
+      </form>
+
+      <form th:if="${proximaParada.status.name() == 'CHEGOU'}" class="stack gap-8 mt-4"
+            th:action="@{/gestao/motoboy/rotas/{id}/paradas/{paradaId}/falha(id=${rota.id},paradaId=${proximaParada.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <select class="input" name="falhaStatus" required="required">
+          <option value="">Não consegui entregar...</option>
+          <option value="TENTATIVA_SEM_SUCESSO">Cliente ausente / sem sucesso</option>
+          <option value="REAGENDAR">Reagendar entrega</option>
+        </select>
+        <input class="input" name="motivo" placeholder="Motivo" />
+        <button class="btn" type="submit">Registrar problema</button>
+      </form>
+    </section>
+
+    <section class="card p-4" th:if="${proximaParada == null and rota.status.name() != 'PLANEJADA'}">
+      <p>Nenhuma parada pendente — rota concluída.</p>
+    </section>
+  </main>
+</body>
+</html>

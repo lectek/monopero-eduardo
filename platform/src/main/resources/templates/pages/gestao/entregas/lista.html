@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entregas — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Entregas</h1>
+
+    <section class="card p-4 mb-4">
+      <h2 class="text-base font-semibold mb-8">Vendas elegíveis para rota</h2>
+      <p th:if="${vendasElegiveis.isEmpty()}">Nenhuma venda em modo ENTREGA aguardando roteirização.</p>
+
+      <form th:if="${!vendasElegiveis.isEmpty()}" th:action="@{/gestao/entregas/previsualizar}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <table class="gestao-tabela mb-8">
+          <thead>
+            <tr><th></th><th>Venda</th><th>Cliente</th><th>Endereço</th><th>Total</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="venda : ${vendasElegiveis}">
+              <td>
+                <input type="checkbox" name="vendaIds" th:value="${venda.id}"
+                       th:checked="${vendaIdsSelecionadas != null and #lists.contains(vendaIdsSelecionadas, venda.id)}" />
+              </td>
+              <td th:text="${venda.numero ?: ('#' + venda.id)}"></td>
+              <td th:text="${venda.cliente != null ? venda.cliente.nome : '—'}"></td>
+              <td th:text="${venda.enderecoEntrega}"></td>
+              <td th:text="${venda.total}"></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="stack gap-8" style="max-width:420px;">
+          <input class="input" name="origem" placeholder="Endereço de origem (a loja)" th:value="${origemDigitada}" />
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn" type="submit" formaction="/gestao/entregas/previsualizar">Pré-visualizar rota</button>
+            <button class="btn btn--primary" type="submit" formaction="/gestao/entregas">Criar rota</button>
+          </div>
+        </div>
+      </form>
+
+      <div th:if="${erroPreview}" class="badge badge--danger mt-4" th:text="${erroPreview}"></div>
+
+      <div th:if="${preview}" class="mt-4">
+        <h3 class="text-base font-semibold">Prévia da rota</h3>
+        <p>
+          Origem: <span th:text="${preview.origem}"></span> —
+          Distância total: <span th:text="${preview.distanciaTotalKm != null ? preview.distanciaTotalKm + ' km' : '-'}"></span>
+        </p>
+        <ol>
+          <li th:each="parada : ${preview.paradas}">
+            <span th:text="${parada.clienteNome}"></span> — <span th:text="${parada.enderecoEntrega}"></span>
+            (<span th:text="${parada.distanciaAcumuladaKm != null ? parada.distanciaAcumuladaKm + ' km' : '-'}"></span>)
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="card p-4">
+      <h2 class="text-base font-semibold mb-8">Rotas recentes</h2>
+      <p th:if="${rotas.isEmpty()}">Nenhuma rota criada ainda.</p>
+      <table th:if="${!rotas.isEmpty()}" class="gestao-tabela">
+        <thead>
+          <tr><th>#</th><th>Origem</th><th>Distância</th><th>Paradas</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="rota : ${rotas}">
+            <td th:text="${rota.id}"></td>
+            <td th:text="${rota.origem}"></td>
+            <td th:text="${rota.distanciaTotalKm != null ? rota.distanciaTotalKm + ' km' : '-'}"></td>
+            <td th:text="${rota.paradas.size()}"></td>
+            <td><span class="badge badge--neutral" th:text="${rota.status}"></span></td>
+            <td><a class="btn btn--sm btn--ghost" th:href="@{/gestao/entregas/rotas/{id}(id=${rota.id})}">Ver</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

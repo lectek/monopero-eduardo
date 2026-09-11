@@ -2,6 +2,7 @@ package br.com.lojagenerica.core.venda;
 
 import br.com.lojagenerica.core.cadastro.LocalEstoque;
 import br.com.lojagenerica.core.parceiro.Cliente;
+import br.com.lojagenerica.domain.enums.ModoEntrega;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -77,6 +78,21 @@ public class Venda {
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal acrescimo = BigDecimal.ZERO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modo_entrega", nullable = false, length = 20)
+    private ModoEntrega modoEntrega = ModoEntrega.RETIRADA;
+
+    @Column(name = "endereco_entrega", columnDefinition = "text")
+    private String enderecoEntrega;
+
+    /**
+     * Valor do frete separado de {@link #acrescimo} (que pode incluir outros
+     * acréscimos) — é o que o módulo de entrega usa pra calcular comissão do
+     * motoboy sem supor que acréscimo == frete. Ver {@link #definirEntrega}.
+     */
+    @Column(name = "valor_frete", nullable = false, precision = 15, scale = 4)
+    private BigDecimal valorFrete = BigDecimal.ZERO;
+
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal total = BigDecimal.ZERO;
 
@@ -142,9 +158,16 @@ public class Venda {
         this.descontoValor = descontoValor != null ? descontoValor : BigDecimal.ZERO;
     }
 
-    /** Usado pelo checkout online pra embutir o frete no total (Venda não tem coluna própria de frete). */
     public void aplicarAcrescimo(BigDecimal acrescimo) {
         this.acrescimo = acrescimo != null ? acrescimo : BigDecimal.ZERO;
+    }
+
+    /** Marca a venda como ENTREGA e embute o frete no total via {@link #aplicarAcrescimo}. */
+    public void definirEntrega(String enderecoEntrega, BigDecimal valorFrete) {
+        this.modoEntrega = ModoEntrega.ENTREGA;
+        this.enderecoEntrega = enderecoEntrega;
+        this.valorFrete = valorFrete != null ? valorFrete : BigDecimal.ZERO;
+        aplicarAcrescimo(this.valorFrete);
     }
 
     public void marcarConfirmada() {
@@ -167,6 +190,10 @@ public class Venda {
 
     public CanalVenda getCanal() {
         return canal;
+    }
+
+    public String getNumero() {
+        return numero;
     }
 
     public Instant getData() {
@@ -199,6 +226,18 @@ public class Venda {
 
     public BigDecimal getTotal() {
         return total;
+    }
+
+    public ModoEntrega getModoEntrega() {
+        return modoEntrega;
+    }
+
+    public String getEnderecoEntrega() {
+        return enderecoEntrega;
+    }
+
+    public BigDecimal getValorFrete() {
+        return valorFrete;
     }
 
     public Instant getCanceladaEm() {

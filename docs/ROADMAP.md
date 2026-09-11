@@ -135,6 +135,70 @@ abaixo neste documento, sem mudança de escopo por enquanto.
 
 ---
 
+## ✅ Módulo de entrega/motoboy (`core.entrega`) — concluído
+
+Pedido explícito do usuário ("vamos analisar as rotas dos motoboys"),
+construído "tudo de uma vez" (escolha explícita do usuário: dado modelo +
+serviço + UI admin + UI motoboy + comissão juntos, testado só no final,
+em vez de fatia por fatia). Precedido de pesquisa nos 2 SaaS anteriores
+do mesmo Eduardo (MiniMercadinhoSaaS/"Rota das Praias" e
+SaúdeMaisFarma/pharmacy) mais um terceiro repo (`multlektec`,
+`br.com.redemaisfarma`) achado no meio da pesquisa por ter a versão mais
+madura (reconciliação financeira por rota, tracking/ETA, testes reais) —
+usado como modelo principal do desenho abaixo.
+
+- **Reaproveitado sem reescrever**: `DeliveryRouteService`/
+  `DeliveryRouteOptimizer` (TSP exato via Held-Karp, geocodificação
+  Nominatim com fallback, matriz OSRM/haversine) já existia em
+  `platform/` (portado do ParaisoPet) mas estava órfão — só
+  `estimateSequentialDistances` tinha chamador (`DeliveryPricingService`);
+  `plan`/`planFromOrigin` (a rota multi-parada de verdade) nunca tinham
+  sido ligados a nada. Também achado nesta pesquisa: um shell de telas
+  `pages/admin/entregas*.html`/`pages/motoboy/*.html` +
+  `static/js/pages/admin|motoboy/*.js` já portados do Rota das Praias,
+  mas órfãos (nenhum controller servia `/admin/entregas` nem `/motoboy`)
+  — usados como referência do contrato de API/UX, não reaproveitados
+  literalmente (JWT+localStorage é o padrão antigo pré-multitenant; a UI
+  nova é Thymeleaf server-rendered, igual ao resto de `/gestao/**`).
+- **Modelo novo** (`V013__entrega.sql`): `venda` ganha
+  `modo_entrega`/`endereco_entrega`/`valor_frete` (antes o frete só
+  existia embutido em `acrescimo`, sem coluna própria — lacuna
+  identificada e fechada); `entrega_rota`/`entrega_parada` com snapshots
+  de nome/endereço/frete (estabilidade de auditoria — igual às 3
+  referências).
+- **Fix de design em relação a TODAS as referências analisadas**:
+  nenhuma delas resolveu "dois motoboys assumindo a mesma rota" (era
+  first-come-first-served silencioso em todas). Aqui,
+  `EntregaRotaRepository.reivindicarEIniciar` é um UPDATE condicional
+  (`where status = 'PLANEJADA'`) — só um motoboy ganha a corrida, o
+  outro recebe HTTP 409 (testado com dois motoboys reais no mesmo
+  teste). Motoboy também ganhou identidade própria via RBAC
+  (`ENTREGA_EXECUTAR`) em vez de reusar papel admin ou tabela paralela —
+  nenhuma referência tinha isso.
+- **Comissão**: percentual configurável por tenant
+  (`AppSettingService` chave `entrega.motoboy.comissao_percentual`,
+  default zero — nunca um percentual comercial fictício), capturado
+  como snapshot na criação da rota (mudar a config depois não altera
+  rotas já criadas). Motoboy vê SEMPRE dois números — confirmado
+  (paradas já entregues) e projetado total (rota inteira) — em vez de a
+  comissão "zerar" visualmente assim que ele inicia a rota, requisito
+  central do pedido ("recebe as solicitações de quanto vai ganhar antes
+  da rota").
+  - Não trazido desta rodada (corte de escopo deliberado): reconciliação
+    de dinheiro físico coletado vs. repassar pra loja (só
+    MiniMercadinhoSaaS/Rota das Praias tinha isso) e tracking GPS ao
+    vivo pro cliente final (nenhuma das referências resolveu isso bem, e
+    não foi pedido explicitamente) — ambos ficam como próximo passo se
+    fizer sentido depois.
+- Testado via `EntregaRotaFlowIT` (ponta a ponta: roteirização →
+  reivindicação atômica com dois motoboys → sequência bloqueada fora de
+  ordem → confirmação com pagamento → conclusão automática da rota →
+  comissão) usando o padrão de Nominatim falso embutido
+  (`com.sun.net.httpserver.HttpServer`) achado em `multlektec` — mesmo
+  padrão já usado nesta suíte pra `PdvSyncFlowIT`.
+
+---
+
 ## ✅ Fase 0 — Fundação (concluída)
 
 **O que foi feito** (só em `platform/`; `pdv/` ainda não foi tocado — ele só

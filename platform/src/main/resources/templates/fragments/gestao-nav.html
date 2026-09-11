@@ -10,6 +10,8 @@
   <a th:href="@{/gestao/locais-estoque}">Locais de estoque</a>
   <a th:href="@{/gestao/condicoes-pagamento}">Condições de pagamento</a>
   <a th:href="@{/gestao/tipos-movimentacao}">Tipos de movimentação</a>
+  <a th:href="@{/gestao/entregas}" sec:authorize="hasAuthority('ENTREGA_GERENCIAR')">Entregas</a>
+  <a th:href="@{/gestao/motoboy}" sec:authorize="hasAuthority('ENTREGA_EXECUTAR')">Minhas rotas</a>
   <a th:href="@{/gestao/usuarios}">Usuários</a>
   <a th:href="@{/gestao/papeis}">Papéis</a>
   <span class="gestao-nav__espaco"></span>
