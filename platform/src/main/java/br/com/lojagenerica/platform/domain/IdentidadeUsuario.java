@@ -71,8 +71,16 @@ public class IdentidadeUsuario {
         return senhaHash;
     }
 
+    public void setSenhaHash(String senhaHash) {
+        this.senhaHash = senhaHash;
+    }
+
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
     }
 
     public Instant getCriadoEm() {

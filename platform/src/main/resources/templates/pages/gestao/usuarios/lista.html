@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Usuários — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Usuários</h1>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/usuarios/novo}">Novo usuário</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>E-mail</th><th>Papéis</th><th>Status</th><th>Último acesso</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="usuario : ${usuarios}">
+          <td th:text="${usuario.nome}"></td>
+          <td th:text="${usuario.email}"></td>
+          <td th:text="${#strings.listJoin(usuario.papeis.![nome], ', ')}"></td>
+          <td th:text="${usuario.ativo} ? 'Ativo' : 'Inativo'"></td>
+          <td th:text="${usuario.ultimoAcessoEm}"></td>
+          <td>
+            <a class="btn btn--sm btn--ghost" th:href="@{/gestao/usuarios/{id}/editar(id=${usuario.id})}">Editar</a>
+          </td>
+        </tr>
+        <tr th:if="${usuarios.isEmpty()}">
+          <td colspan="6">Nenhum usuário cadastrado ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

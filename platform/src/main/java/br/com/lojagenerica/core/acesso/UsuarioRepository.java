@@ -1,5 +1,6 @@
 package br.com.lojagenerica.core.acesso;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,4 +15,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             + "left join fetch p.permissoes "
             + "where u.id = :id")
     Optional<Usuario> findByIdComPapeisEPermissoes(Long id);
+
+    /** Usado pela tela de gestão de usuários (lista mostra os papéis de cada um). */
+    @Query("select distinct u from Usuario u left join fetch u.papeis order by u.nome")
+    List<Usuario> findAllComPapeis();
 }

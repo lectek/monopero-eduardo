@@ -61,6 +61,9 @@ public class AdminAuthenticationProvider implements AuthenticationProvider {
         try {
             Usuario usuario = usuarioRepository.findByIdComPapeisEPermissoes(sucesso.usuarioIdTenant())
                     .orElseThrow(() -> new NoSuchElementException("Usuário " + sucesso.usuarioIdTenant() + " não encontrado"));
+            if (!usuario.isAtivo()) {
+                throw new BadCredentialsException("Usuário inativo.");
+            }
 
             List<SimpleGrantedAuthority> authorities = usuario.getPapeis().stream()
                     .flatMap(papel -> papel.getPermissoes().stream())

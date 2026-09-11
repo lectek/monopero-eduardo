@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Papéis — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <h1 class="text-lg font-semibold mb-16">Papéis</h1>
+    <p class="mb-16">ADMINISTRADOR é o papel de sistema — sempre tem todas as permissões e não pode ser editado aqui.</p>
+    <div class="gestao-acoes">
+      <a class="btn btn--primary" th:href="@{/gestao/papeis/novo}">Novo papel</a>
+    </div>
+    <table class="gestao-tabela">
+      <thead>
+        <tr><th>Nome</th><th>Descrição</th><th>Permissões</th><th>Origem</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="papel : ${papeis}">
+          <td th:text="${papel.nome}"></td>
+          <td th:text="${papel.descricao}"></td>
+          <td th:text="${papel.permissoes.size()}"></td>
+          <td th:text="${papel.sistema} ? 'Sistema' : 'Livre'"></td>
+          <td>
+            <a th:unless="${papel.sistema}" class="btn btn--sm btn--ghost" th:href="@{/gestao/papeis/{id}/editar(id=${papel.id})}">Editar</a>
+          </td>
+        </tr>
+        <tr th:if="${papeis.isEmpty()}">
+          <td colspan="5">Nenhum papel cadastrado ainda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
