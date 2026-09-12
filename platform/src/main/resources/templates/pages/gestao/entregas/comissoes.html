@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comissão por motoboy — Gestão</title>
+  <link rel="stylesheet" th:href="@{/css/main.css}" />
+  <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+</head>
+<body>
+  <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <main class="container mt-4 mb-8">
+    <p><a th:href="@{/gestao/entregas}">&larr; Voltar pra Entregas</a></p>
+    <h1 class="text-lg font-semibold mb-16">Comissão por motoboy</h1>
+
+    <p th:if="${resumos.isEmpty()}">Nenhum motoboy assumiu uma rota ainda.</p>
+
+    <table th:if="${!resumos.isEmpty()}" class="gestao-tabela">
+      <thead>
+        <tr><th>Motoboy</th><th>Rotas concluídas</th><th>Entregas confirmadas</th><th>Comissão total confirmada</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="resumo : ${resumos}">
+          <td>
+            <span th:text="${resumo.motoboyNome}"></span><br />
+            <small th:text="${resumo.motoboyEmail}"></small>
+          </td>
+          <td th:text="${resumo.rotasConcluidas}"></td>
+          <td th:text="${resumo.entregasConfirmadas}"></td>
+          <td th:text="'R$ ' + ${resumo.comissaoTotalConfirmada}"></td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

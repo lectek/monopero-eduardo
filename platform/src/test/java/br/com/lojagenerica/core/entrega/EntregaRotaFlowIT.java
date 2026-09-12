@@ -150,6 +150,8 @@ class EntregaRotaFlowIT {
         TenantContext.set(schema);
         Long vendaId1;
         Long vendaId2;
+        Long vendaId3;
+        Long vendaId4;
         String emailMotoboy1 = "motoboy1@" + sufixo + ".example";
         String emailMotoboy2 = "motoboy2@" + sufixo + ".example";
         Long papelMotoboyId;
@@ -167,6 +169,10 @@ class EntregaRotaFlowIT {
                     "Rua das Flores, 100, João Pessoa", new BigDecimal("8.00"));
             vendaId2 = criarVendaEmEntrega(localId, produtoId, unidadeId, formaPagamentoId,
                     "Rua das Palmeiras, 200, João Pessoa", new BigDecimal("12.00"));
+            vendaId3 = criarVendaEmEntrega(localId, produtoId, unidadeId, formaPagamentoId,
+                    "Rua dos Coqueiros, 300, João Pessoa", new BigDecimal("9.00"));
+            vendaId4 = criarVendaEmEntrega(localId, produtoId, unidadeId, formaPagamentoId,
+                    "Rua do Sol, 400, João Pessoa", new BigDecimal("11.00"));
 
             Permissao entregaExecutar = permissaoRepository.findByCodigo("ENTREGA_EXECUTAR").orElseThrow();
             Papel papelMotoboy = papelRepository.save(new Papel("Motoboy", "Executa rotas de entrega", false));
@@ -266,6 +272,44 @@ class EntregaRotaFlowIT {
         }
 
         mockMvc.perform(get("/gestao/motoboy/rotas/{id}", rotaId).session(sessaoMotoboy1)).andExpect(status().isOk());
+
+        // Resumo de comissão por motoboy: soma em cima de todas as rotas já assumidas.
+        var comissoes = mockMvc.perform(get("/gestao/entregas/comissoes").session(sessaoDono))
+                .andExpect(status().isOk())
+                .andReturn();
+        String corpoComissoes = comissoes.getResponse().getContentAsString();
+        assertThat(corpoComissoes).contains(emailMotoboy1);
+        assertThat(corpoComissoes).contains("16.00");
+
+        // Admin cancela uma segunda rota: paradas pendentes cancelam junto e as vendas voltam a ficar elegíveis.
+        var criacaoRota2 = mockMvc.perform(post("/gestao/entregas").session(sessaoDono).with(csrf())
+                        .param("vendaIds", String.valueOf(vendaId3), String.valueOf(vendaId4))
+                        .param("origem", "Loja Central, João Pessoa"))
+                .andExpect(redirectedUrlPattern("/gestao/entregas/rotas/*"))
+                .andReturn();
+        String location2 = criacaoRota2.getResponse().getRedirectedUrl();
+        Long rota2Id = Long.valueOf(location2.substring(location2.lastIndexOf('/') + 1));
+
+        mockMvc.perform(post("/gestao/entregas/rotas/{id}/cancelar", rota2Id).session(sessaoDono).with(csrf())
+                        .param("motivo", "Endereço errado"))
+                .andExpect(status().is3xxRedirection());
+
+        TenantContext.set(schema);
+        try {
+            EntregaRota rota2 = entregaRotaRepository.findByIdComParadas(rota2Id).orElseThrow();
+            assertThat(rota2.getStatus()).isEqualTo(StatusEntregaRota.CANCELADA);
+            assertThat(rota2.getCancelamentoMotivo()).isEqualTo("Endereço errado");
+            assertThat(rota2.getParadas()).allSatisfy(p -> assertThat(p.getStatus()).isEqualTo(StatusEntregaParada.CANCELADA));
+        } finally {
+            TenantContext.clear();
+        }
+
+        var listaAposCancelamento = mockMvc.perform(get("/gestao/entregas").session(sessaoDono))
+                .andExpect(status().isOk())
+                .andReturn();
+        String corpoLista = listaAposCancelamento.getResponse().getContentAsString();
+        assertThat(corpoLista).contains("Rua dos Coqueiros, 300, João Pessoa");
+        assertThat(corpoLista).contains("Rua do Sol, 400, João Pessoa");
     }
 
     private Long criarVendaEmEntrega(Long localId, Long produtoId, Long unidadeId, Long formaPagamentoId,

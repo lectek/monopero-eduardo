@@ -163,6 +163,49 @@ public class EntregaRotaService {
         return rota;
     }
 
+    /**
+     * Cancela a rota inteira (erro de roteirização, motoboy indisponível
+     * etc.) — cancela também as paradas ainda não concluídas, o que libera
+     * as vendas correspondentes pra aparecerem de novo como elegíveis
+     * (ver {@link #listarVendasElegiveis}, que exclui vendas com parada
+     * ativa — CANCELADA não conta como ativa).
+     */
+    @Transactional
+    public EntregaRota cancelarRota(Long rotaId, String motivo) {
+        EntregaRota rota = obterRota(rotaId);
+        if (rota.getStatus() == StatusEntregaRota.CONCLUIDA || rota.getStatus() == StatusEntregaRota.CANCELADA) {
+            throw new IllegalStateException("Rota " + rotaId + " já está " + rota.getStatus() + ", não pode ser cancelada");
+        }
+        for (EntregaParada parada : rota.getParadas()) {
+            if (!parada.isConcluida()) {
+                parada.cancelar();
+            }
+        }
+        rota.cancelar(motivo);
+        return rota;
+    }
+
+    /**
+     * Comissão total confirmada por motoboy, somada em cima de TODAS as
+     * rotas que ele já assumiu (não só a rota atual) — visão que faltava
+     * no admin: antes só dava pra ver a comissão rota por rota.
+     */
+    @Transactional(readOnly = true)
+    public List<ResumoComissaoMotoboyView> listarResumoComissaoPorMotoboy() {
+        List<EntregaRota> rotas = entregaRotaRepository.buscarComEntregadorComParadas();
+        java.util.Map<Long, ResumoComissaoAcumulador> porMotoboy = new java.util.LinkedHashMap<>();
+        for (EntregaRota rota : rotas) {
+            Usuario motoboy = rota.getEntregador();
+            ResumoComissaoAcumulador acumulador = porMotoboy.computeIfAbsent(motoboy.getId(),
+                    id -> new ResumoComissaoAcumulador(motoboy.getNome(), motoboy.getEmail()));
+            long entregasNaRota = rota.getParadas().stream().filter(p -> p.getStatus() == StatusEntregaParada.ENTREGUE).count();
+            BigDecimal comissaoNaRota = comissaoSobre(somarFrete(rota, p -> p.getStatus() == StatusEntregaParada.ENTREGUE),
+                    rota.getPercentualComissaoSnapshot());
+            acumulador.somar(rota.getStatus() == StatusEntregaRota.CONCLUIDA, entregasNaRota, comissaoNaRota);
+        }
+        return porMotoboy.values().stream().map(ResumoComissaoAcumulador::paraView).toList();
+    }
+
     @Transactional
     public EntregaParada regenerarCodigo(Long rotaId, Long paradaId) {
         EntregaRota rota = obterRota(rotaId);
@@ -281,5 +324,34 @@ public class EntregaRotaService {
 
     public record GanhoMotoboyView(BigDecimal percentualComissao, BigDecimal comissaoConfirmada,
                                     BigDecimal comissaoProjetadaTotal) {
+    }
+
+    public record ResumoComissaoMotoboyView(String motoboyNome, String motoboyEmail, long rotasConcluidas,
+                                             long entregasConfirmadas, BigDecimal comissaoTotalConfirmada) {
+    }
+
+    private static final class ResumoComissaoAcumulador {
+        private final String nome;
+        private final String email;
+        private long rotasConcluidas;
+        private long entregasConfirmadas;
+        private BigDecimal comissaoTotalConfirmada = BigDecimal.ZERO;
+
+        private ResumoComissaoAcumulador(String nome, String email) {
+            this.nome = nome;
+            this.email = email;
+        }
+
+        void somar(boolean rotaConcluida, long entregasNaRota, BigDecimal comissaoNaRota) {
+            if (rotaConcluida) {
+                rotasConcluidas++;
+            }
+            entregasConfirmadas += entregasNaRota;
+            comissaoTotalConfirmada = comissaoTotalConfirmada.add(comissaoNaRota);
+        }
+
+        ResumoComissaoMotoboyView paraView() {
+            return new ResumoComissaoMotoboyView(nome, email, rotasConcluidas, entregasConfirmadas, comissaoTotalConfirmada);
+        }
     }
 }

@@ -75,4 +75,16 @@ public class EntregaGestaoController {
         entregaRotaService.regenerarCodigo(id, paradaId);
         return "redirect:/gestao/entregas/rotas/" + id;
     }
+
+    @PostMapping("/gestao/entregas/rotas/{id}/cancelar")
+    public String cancelar(@PathVariable Long id, @RequestParam(required = false) String motivo) {
+        entregaRotaService.cancelarRota(id, motivo);
+        return "redirect:/gestao/entregas/rotas/" + id;
+    }
+
+    @GetMapping("/gestao/entregas/comissoes")
+    public String resumoComissoes(Model model) {
+        model.addAttribute("resumos", entregaRotaService.listarResumoComissaoPorMotoboy());
+        return "pages/gestao/entregas/comissoes";
+    }
 }

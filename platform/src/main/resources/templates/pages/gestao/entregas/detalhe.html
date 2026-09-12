@@ -22,6 +22,15 @@
         já confirmada R$ <span th:text="${ganho.comissaoConfirmada}"></span> —
         prevista pra rota completa R$ <span th:text="${ganho.comissaoProjetadaTotal}"></span>
       </p>
+
+      <form th:if="${rota.status.name() != 'CONCLUIDA' and rota.status.name() != 'CANCELADA'}"
+            th:action="@{/gestao/entregas/rotas/{id}/cancelar(id=${rota.id})}" method="post"
+            class="stack gap-8 mt-4" style="max-width:420px;"
+            onsubmit="return confirm('Cancelar esta rota? As paradas ainda pendentes serão canceladas e as vendas voltam a ficar elegíveis.');">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input class="input" name="motivo" placeholder="Motivo do cancelamento (opcional)" />
+        <button class="btn btn--danger" type="submit">Cancelar rota</button>
+      </form>
     </section>
 
     <section class="card p-4">

@@ -29,6 +29,10 @@ public interface EntregaRotaRepository extends JpaRepository<EntregaRota, Long> 
     @Query("select distinct r from EntregaRota r left join fetch r.paradas left join fetch r.entregador where r.status = :status order by r.criadaEm desc")
     List<EntregaRota> buscarPorStatusComParadas(@Param("status") StatusEntregaRota status);
 
+    /** Base do resumo de comissão por motoboy — toda rota que já teve um entregador atribuído. */
+    @Query("select distinct r from EntregaRota r left join fetch r.paradas left join fetch r.entregador where r.entregador is not null order by r.criadaEm desc")
+    List<EntregaRota> buscarComEntregadorComParadas();
+
     /**
      * Reivindicação atômica: só um motoboy consegue "ganhar" a corrida —
      * a query só afeta 1 linha se {@code status} ainda for PLANEJADA no
