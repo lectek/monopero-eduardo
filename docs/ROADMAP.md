@@ -11,15 +11,39 @@ critério de saída (como saber que a fase terminou de verdade).
 
 ## 📍 Próximos passos (ordem de prioridade)
 
-Lista viva — atualizada a cada corte de trabalho. Reordenada agora que a
-UI web de administração tem um núcleo funcional (8 telas, 26 classes de
-IT verdes): os itens que dependiam dela (login de operador no PDV, por
-exemplo, agora tem um `UsuarioGestaoService` de verdade pra se apoiar)
-sobem de prioridade; os 3 cadastros que faltavam (categoria, conversão de
-unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
+Lista viva — atualizada a cada corte de trabalho. Reordenada depois do
+módulo de entrega/motoboy (`core.entrega`, concluído): o gap que ele
+deixou em aberto (nº 1 abaixo) sobe pro topo porque, sem ele, o módulo
+inteiro é inacessível no uso real — só foi exercitado em teste manipulando
+a entidade `Venda` direto, nunca pelo caminho que um usuário de verdade
+usaria.
 
-1. **Teste manual numa máquina real com display** (ação do
-   usuário/Eduardo, não automatizável nesta sessão) — cobre as DUAS
+1. **Fechar o loop do módulo de entrega: nada cria uma `Venda` em modo
+   ENTREGA hoje.** `RegistrarVendaCommand` (usado por `VendaController`,
+   `PdvSyncService` e — via `PedidoEntity`, caminho ainda mais velho —
+   `CheckoutService`) não tem campos de endereço/modo de entrega; a
+   única forma de uma venda chegar em `/gestao/entregas` como elegível
+   é chamar `venda.definirEntrega(...)` manualmente (é o que
+   `EntregaRotaFlowIT` faz). Precisa: adicionar
+   `modoEntrega`/`enderecoEntrega` ao `RegistrarVendaCommand` (e por
+   tabela a uma tela/campo de endereço no PDV ou no checkout online),
+   ou pelo menos uma ação "marcar como entrega" numa venda já
+   confirmada, direto em `/gestao/vendas` (tela que também não existe
+   ainda — hoje só existe criar/cancelar via API, sem CRUD web).
+
+2. **Limpar o módulo de entrega antigo, órfão** —
+   `pages/admin/entregas*.html`+`js/pages/admin/entregas*.js`,
+   `pages/motoboy/*.html`+`js/pages/motoboy/*.js`, e o gate
+   `AdminJwtAuthFilter`/`/api/admin/**`/`/api/motoboy/**` que os
+   protegeria: nenhum desses arquivos é servido por controller nenhum
+   (`AdminMvcController` não tem rota pra `/admin/entregas` nem
+   `/motoboy`) — são leftovers do port original do ParaisoPet/Rota das
+   Praias, superados pelo módulo novo em `/gestao/entregas`+
+   `/gestao/motoboy`. Deletar evita confusão de quem for mexer aqui
+   depois (dois "módulos de entrega" no mesmo repo, um morto).
+
+3. **Teste manual numa máquina real com display** (ação do
+   usuário/Eduardo, não automatizável nesta sessão) — cobre TRÊS
    frentes de UI construídas às cegas até aqui:
    - Cliente PDV (`TelaPareamento`/`VendaScreen`): rodar
      `mvn exec:java -Dexec.mainClass=br.com.lojagenerica.pdvclient.App`,
@@ -27,11 +51,16 @@ unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
      conferir que ela aparece no servidor.
    - UI web `/gestao/**`: subir o `platform/` (`docker compose up`),
      logar com o dono, percorrer cada tela (produtos, cadastros,
-     usuários/papéis) — nenhuma foi vista num navegador real ainda,
-     só testada via MockMvc.
+     usuários/papéis, entregas/motoboy) — nenhuma foi vista num
+     navegador real ainda, só testada via MockMvc.
+   - Módulo de entrega especificamente: roteirizar uma venda de
+     verdade, abrir a tela do motoboy no celular, testar o ping de GPS
+     (`navigator.geolocation`) e o link `/rastreio/{token}` num
+     segundo aparelho — geolocalização de navegador tem
+     comportamento/permissão que só aparece num dispositivo real.
    Qualquer problema de layout/usabilidade só aparece aqui.
 
-2. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
+4. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
    null, o que trava desconto (`VendaService.validarDesconto` exige
    e-mail resolvível) e a atribuição "vendido por". Ganhou prioridade
    porque `UsuarioGestaoService` (item "UI web", abaixo) já existe pra
@@ -43,27 +72,27 @@ unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
    autenticado pro `VendaLocalDao.registrarVenda` (hoje hardcoded `null`
    em `App`).
 
-3. **AjusteEstoqueScreen** (substitui `Dispatch.java`) — dá baixa/entrada
+5. **AjusteEstoqueScreen** (substitui `Dispatch.java`) — dá baixa/entrada
    manual de estoque com motivo obrigatório, via outbox com um
    `TipoEventoPdv` novo (`AJUSTE_ESTOQUE`) espelhando o padrão de
    `VENDA_REGISTRADA`/`VENDA_CANCELADA` (servidor + cliente).
 
-4. **Recibo** — `Receipt.java` (legado) foi desenhado pro modelo
+6. **Recibo** — `Receipt.java` (legado) foi desenhado pro modelo
    nome+cor+peso; adaptar pra imprimir `ItemVendaLocal` genérico
    (produto+quantidade+preço, sem cor/peso) e plugar em
    `VendaScreen.confirmarVenda`.
 
-5. **Pix repontado pro servidor** — hoje `MercadoPagoPixClient`/
+7. **Pix repontado pro servidor** — hoje `MercadoPagoPixClient`/
    `PixPaymentDialog` (legado) criam a cobrança direto do caixa, com o
    token do Mercado Pago em texto no `config.properties` da loja. O
    servidor já sabe criar cobrança Pix pro canal online
    (`MercadoPagoCheckoutService`), mas falta o equivalente pro canal PDV
    em `pdv.web`.
 
-6. **Relatórios locais do PDV** — adaptar `Stock.java`/`SalesReport.java`/
+8. **Relatórios locais do PDV** — adaptar `Stock.java`/`SalesReport.java`/
    `SalesCalendar.java` pra ler de `cache_produto`/`venda_local`.
 
-7. **UI web — os 3 cadastros que faltam** (categoria hierárquica,
+9. **UI web — os 3 cadastros que faltam** (categoria hierárquica,
    conversão de unidade, definição de atributo) — rebaixados porque
    nenhum bloqueia uso diário (produto não exige categoria). Categoria
    precisa de um `CategoriaService` pra calcular caminho materializado
@@ -86,10 +115,10 @@ unidade, atributo) descem — nenhum bloqueia o uso diário do sistema.
    Postgres, independente disso — é o mesmo problema do storefront
    ainda não multi-tenant (ver Fase I).
 
-8. **Limpeza final do PDV**: deletar `Production.java`/
-   `ModifyProducts.java`/`AdminSaas.java` (função migra pra UI web,
-   já pronta), upgrade `jpackage`, cortar `mainClass` do assembly de
-   `mysquare.core.IMStart` pro `App` novo.
+10. **Limpeza final do PDV**: deletar `Production.java`/
+    `ModifyProducts.java`/`AdminSaas.java` (função migra pra UI web,
+    já pronta), upgrade `jpackage`, cortar `mainClass` do assembly de
+    `mysquare.core.IMStart` pro `App` novo.
 
 ## 🔧 Refino da UI web (rodada "aprimorar e refinar")
 
