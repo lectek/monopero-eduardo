@@ -22,6 +22,14 @@
         já confirmada R$ <span th:text="${ganho.comissaoConfirmada}"></span> —
         prevista pra rota completa R$ <span th:text="${ganho.comissaoProjetadaTotal}"></span>
       </p>
+      <p th:if="${ganho.dinheiroColetado.signum() > 0}">
+        Dinheiro coletado pelo motoboy: R$ <span th:text="${ganho.dinheiroColetado}"></span> —
+        <span th:if="${ganho.valorDevolverLoja.signum() > 0}">devolver pra loja: R$ <span th:text="${ganho.valorDevolverLoja}"></span></span>
+        <span th:if="${ganho.valorDevolverLoja.signum() == 0}">coberto pela própria comissão dele</span>
+      </p>
+      <p th:if="${ganho.comissaoNaoCobertaPorDinheiro.signum() > 0}">
+        Comissão a acertar com a loja (não veio do dinheiro coletado): R$ <span th:text="${ganho.comissaoNaoCobertaPorDinheiro}"></span>
+      </p>
 
       <form th:if="${rota.status.name() != 'CONCLUIDA' and rota.status.name() != 'CANCELADA'}"
             th:action="@{/gestao/entregas/rotas/{id}/cancelar(id=${rota.id})}" method="post"
@@ -51,6 +59,10 @@
         </p>
         <p th:if="${parada.observacao}">Obs.: <span th:text="${parada.observacao}"></span></p>
         <p th:if="${parada.ocorrencias}">Ocorrências: <span th:text="${parada.ocorrencias}"></span></p>
+        <p>Link de rastreio pro cliente:
+          <a th:href="@{'/rastreio/' + ${parada.tokenRastreio}}" target="_blank" rel="noopener"
+             th:text="@{'/rastreio/' + ${parada.tokenRastreio}}"></a>
+        </p>
       </div>
       <p th:if="${rota.paradas.isEmpty()}">Nenhuma parada nesta rota.</p>
     </section>

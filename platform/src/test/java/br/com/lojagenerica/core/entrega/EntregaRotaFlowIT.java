@@ -127,6 +127,10 @@ class EntregaRotaFlowIT {
     @Autowired
     private EntregaRotaRepository entregaRotaRepository;
     @Autowired
+    private EntregaParadaRepository entregaParadaRepository;
+    @Autowired
+    private EntregaRotaService entregaRotaService;
+    @Autowired
     private EmpresaRepository empresaRepository;
     @Autowired
     private IdentidadeUsuarioRepository identidadeUsuarioRepository;
@@ -312,6 +316,131 @@ class EntregaRotaFlowIT {
         assertThat(corpoLista).contains("Rua do Sol, 400, João Pessoa");
     }
 
+    /**
+     * Rastreio público do cliente (via GPS enviado pelo motoboy) e
+     * reconciliação de dinheiro coletado (venda paga só na entrega, em
+     * espécie — o motoboy fica com a comissão e devolve o resto pra loja).
+     */
+    @Test
+    void motoboyAtualizaLocalizacaoClienteAcompanhaRastreioEDinheiroColetadoReconcilia() throws Exception {
+        String sufixo = "entrega-rastreio-" + System.nanoTime();
+        Empresa empresa = provisionamentoTenantService.provisionar(new ProvisionarEmpresaCommand(
+                sufixo, sufixo, null, sufixo, "Dono", "dono@" + sufixo + ".example", "senhaForte123"));
+        schema = empresa.getSchemaNome();
+
+        TenantContext.set(schema);
+        Long vendaId1;
+        Long vendaId2;
+        String emailMotoboy = "motoboy-rastreio@" + sufixo + ".example";
+        try {
+            appSettingService.upsert("entrega.motoboy.comissao_percentual", "80", "Comissão do motoboy");
+
+            Long unidadeId = unidadeMedidaRepository.save(new UnidadeMedida("UN", "Unidade", (short) 0, false)).getId();
+            Long localId = localEstoqueRepository.save(new LocalEstoque("Loja", "LOJA", true)).getId();
+            Long produtoId = produtoRepository.save(new Produto("Produto entregável",
+                    unidadeMedidaRepository.findById(unidadeId).orElseThrow())).getId();
+
+            vendaId1 = criarVendaEmEntregaSemPagamento(localId, produtoId, unidadeId,
+                    "Rua das Flores, 100, João Pessoa", new BigDecimal("5.00"));
+            vendaId2 = criarVendaEmEntregaSemPagamento(localId, produtoId, unidadeId,
+                    "Rua das Palmeiras, 200, João Pessoa", new BigDecimal("5.00"));
+
+            Permissao entregaExecutar = permissaoRepository.findByCodigo("ENTREGA_EXECUTAR").orElseThrow();
+            Papel papelMotoboy = papelRepository.save(new Papel("Motoboy", "Executa rotas de entrega", false));
+            papelMotoboy.getPermissoes().add(entregaExecutar);
+            papelMotoboy = papelRepository.save(papelMotoboy);
+            criarUsuarioComPapel(emailMotoboy, "Motoboy Rastreio", papelMotoboy.getId());
+        } finally {
+            TenantContext.clear();
+        }
+        criarIdentidade(empresaRepository.findBySchemaNome(schema).orElseThrow(), emailMotoboy);
+
+        MockHttpSession sessaoDono = new MockHttpSession();
+        mockMvc.perform(post("/gestao/login").session(sessaoDono).with(csrf())
+                        .param("email", "dono@" + sufixo + ".example")
+                        .param("senha", "senhaForte123"))
+                .andExpect(status().is3xxRedirection());
+        MockHttpSession sessaoMotoboy = login(emailMotoboy, "senhaMotoboy123");
+
+        var criacao = mockMvc.perform(post("/gestao/entregas").session(sessaoDono).with(csrf())
+                        .param("vendaIds", String.valueOf(vendaId1), String.valueOf(vendaId2))
+                        .param("origem", "Loja Central, João Pessoa"))
+                .andExpect(redirectedUrlPattern("/gestao/entregas/rotas/*"))
+                .andReturn();
+        Long rotaId = Long.valueOf(criacao.getResponse().getRedirectedUrl()
+                .substring(criacao.getResponse().getRedirectedUrl().lastIndexOf('/') + 1));
+
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/iniciar", rotaId).session(sessaoMotoboy).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        List<EntregaParada> paradas;
+        TenantContext.set(schema);
+        try {
+            paradas = entregaRotaRepository.findByIdComParadas(rotaId).orElseThrow().getParadas();
+        } finally {
+            TenantContext.clear();
+        }
+        Long primeiraParadaId = paradas.get(0).getId();
+        Long segundaParadaId = paradas.get(1).getId();
+        String tokenSegundaParada = "" + paradas.get(1).getTokenRastreio();
+
+        // Rastreio antes de qualquer ping de GPS: ainda não dá pra estimar ETA, mas já sabemos a fila.
+        var rastreioSemPosicao = mockMvc.perform(get("/rastreio/{token}", tokenSegundaParada)
+                        .header("X-Empresa", schema))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(rastreioSemPosicao.getResponse().getContentAsString()).contains("falta");
+
+        // Motoboy envia a posição (ping de GPS da tela de rota).
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/localizacao", rotaId).session(sessaoMotoboy).with(csrf())
+                        .param("latitude", "-7.1195")
+                        .param("longitude", "-34.8450"))
+                .andExpect(status().isNoContent());
+
+        var rastreioComPosicao = mockMvc.perform(get("/rastreio/{token}", tokenSegundaParada)
+                        .header("X-Empresa", schema))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(rastreioComPosicao.getResponse().getContentAsString()).contains("min");
+
+        // Entrega as duas paradas, recebendo em dinheiro nas duas (COD).
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/paradas/{paradaId}/chegada", rotaId, primeiraParadaId)
+                        .session(sessaoMotoboy).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/paradas/{paradaId}/confirmar", rotaId, primeiraParadaId)
+                        .session(sessaoMotoboy).with(csrf())
+                        .param("formaPagamentoRecebida", "Dinheiro"))
+                .andExpect(status().is3xxRedirection());
+
+        // Depois que a primeira parada foi entregue, a fila da segunda parada zera.
+        var rastreioProximo = mockMvc.perform(get("/rastreio/{token}", tokenSegundaParada)
+                        .header("X-Empresa", schema))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(rastreioProximo.getResponse().getContentAsString()).contains("próxima entrega");
+
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/paradas/{paradaId}/chegada", rotaId, segundaParadaId)
+                        .session(sessaoMotoboy).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/paradas/{paradaId}/confirmar", rotaId, segundaParadaId)
+                        .session(sessaoMotoboy).with(csrf())
+                        .param("formaPagamentoRecebida", "Dinheiro"))
+                .andExpect(status().is3xxRedirection());
+
+        // Reconciliação: 2 vendas de 50,00 cada, nunca pagas antes -> motoboy coletou 100,00 em espécie.
+        // Comissão: 80% de (5,00 + 5,00) de frete = 8,00. Ele fica com os 8,00 e devolve 92,00 pra loja.
+        TenantContext.set(schema);
+        try {
+            EntregaRotaService.GanhoMotoboyView ganho = entregaRotaService.calcularGanho(rotaId);
+            assertThat(ganho.dinheiroColetado()).isEqualByComparingTo("100.00");
+            assertThat(ganho.comissaoConfirmada()).isEqualByComparingTo("8.00");
+            assertThat(ganho.valorDevolverLoja()).isEqualByComparingTo("92.00");
+            assertThat(ganho.comissaoNaoCobertaPorDinheiro()).isEqualByComparingTo("0.00");
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
     private Long criarVendaEmEntrega(Long localId, Long produtoId, Long unidadeId, Long formaPagamentoId,
                                       String endereco, BigDecimal frete) {
         RegistrarVendaCommand cmd = new RegistrarVendaCommand(null, CanalVenda.ONLINE, localId, null, null, null, null,
@@ -320,6 +449,18 @@ class EntregaRotaFlowIT {
                         new BigDecimal("50.00"), BigDecimal.ZERO)),
                 List.of(new RegistrarVendaCommand.PagamentoVendaCommand(formaPagamentoId, new BigDecimal("58.00"),
                         new BigDecimal("58.00"), BigDecimal.ZERO)));
+        Venda venda = vendaService.registrar(cmd);
+        venda.definirEntrega(endereco, frete);
+        return vendaRepository.save(venda).getId();
+    }
+
+    /** COD: nenhum pagamento registrado ainda — o total inteiro fica pra cobrar na entrega. */
+    private Long criarVendaEmEntregaSemPagamento(Long localId, Long produtoId, Long unidadeId, String endereco, BigDecimal frete) {
+        RegistrarVendaCommand cmd = new RegistrarVendaCommand(null, CanalVenda.ONLINE, localId, null, null, null, null,
+                BigDecimal.ZERO, BigDecimal.ZERO,
+                List.of(new RegistrarVendaCommand.ItemVendaCommand(produtoId, new BigDecimal("1"), unidadeId,
+                        new BigDecimal("50.00"), BigDecimal.ZERO)),
+                List.of());
         Venda venda = vendaService.registrar(cmd);
         venda.definirEntrega(endereco, frete);
         return vendaRepository.save(venda).getId();

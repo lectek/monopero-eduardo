@@ -9,6 +9,7 @@ import br.com.lojagenerica.security.admin.AdminPrincipal;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.NoSuchElementException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -98,6 +99,19 @@ public class MotoboyController {
                                   @AuthenticationPrincipal AdminPrincipal principal) {
         entregaRotaService.registrarFalha(id, paradaId, usuarioAutenticado(principal), falhaStatus, motivo, observacao);
         return REDIRECT_ROTA + id;
+    }
+
+    /**
+     * Ping de GPS (chamado por JS via {@code navigator.geolocation.watchPosition},
+     * ver template) — sem redirect, é uma chamada em segundo plano enquanto
+     * a tela fica aberta, não uma submissão de formulário.
+     */
+    @PostMapping("/gestao/motoboy/rotas/{id}/localizacao")
+    public ResponseEntity<Void> atualizarLocalizacao(@PathVariable Long id, @RequestParam double latitude,
+                                                      @RequestParam double longitude,
+                                                      @AuthenticationPrincipal AdminPrincipal principal) {
+        entregaRotaService.atualizarLocalizacao(id, usuarioAutenticado(principal), latitude, longitude);
+        return ResponseEntity.noContent().build();
     }
 
     private Usuario usuarioAutenticado(AdminPrincipal principal) {

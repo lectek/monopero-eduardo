@@ -184,18 +184,43 @@ usado como modelo principal do desenho abaixo.
   comissão "zerar" visualmente assim que ele inicia a rota, requisito
   central do pedido ("recebe as solicitações de quanto vai ganhar antes
   da rota").
-  - Não trazido desta rodada (corte de escopo deliberado): reconciliação
-    de dinheiro físico coletado vs. repassar pra loja (só
-    MiniMercadinhoSaaS/Rota das Praias tinha isso) e tracking GPS ao
-    vivo pro cliente final (nenhuma das referências resolveu isso bem, e
-    não foi pedido explicitamente) — ambos ficam como próximo passo se
-    fizer sentido depois.
-- Testado via `EntregaRotaFlowIT` (ponta a ponta: roteirização →
-  reivindicação atômica com dois motoboys → sequência bloqueada fora de
+- **Admin** (`/gestao/entregas`): cancela rota em qualquer status não
+  final (paradas pendentes cancelam junto, vendas voltam a ficar
+  elegíveis) e vê um resumo de comissão por motoboy somado em cima de
+  TODAS as rotas já assumidas (não só a atual) em `/gestao/entregas/comissoes`.
+- **Reconciliação de dinheiro coletado** (trazida numa segunda rodada,
+  a pedido do usuário — antes cortada de escopo): `entrega_parada` ganha
+  `valor_cobrar_na_entrega_snapshot` (total da venda menos pagamentos já
+  registrados, capturado na criação da rota). Se o motoboy recebe em
+  espécie ("Dinheiro"), o `GanhoMotoboyView` mostra quanto ele coletou,
+  quanto fica de comissão, quanto devolve pra loja
+  (`max(0, coletado - comissão)`) e quanto falta acertar por fora se a
+  comissão superar o que foi coletado em dinheiro — o único item das 3
+  referências que tinha isso (MiniMercadinhoSaaS/Rota das Praias).
+- **Rastreio ao vivo pro cliente** (idem, trazido numa segunda rodada):
+  `entrega_rota` ganha última posição de GPS
+  (`atualizarLocalizacao`, via ping da tela do motoboy,
+  `navigator.geolocation.watchPosition` throttled a ~15s);
+  `entrega_parada` ganha coordenadas (já calculadas pelo
+  `DeliveryRouteService` na criação da rota, só não eram persistidas até
+  aqui) e um `token_rastreio` (UUID) que vira um link público
+  `/rastreio/{token}` — sem login, sem CSRF, só leitura. Mostra pro
+  cliente: status da SUA parada, quantas entregas faltam antes da dele e
+  um ETA estimado por distância haversine (motoboy → parada) sobre uma
+  velocidade média configurável (`entrega.rastreio.velocidade_media_kmh`,
+  default 25 km/h). Exigiu estender `PublicTenantResolutionFilter` (até
+  então só `/api/public/**`/`/webhooks/**`) pra também resolver tenant em
+  `/rastreio/**` — nenhuma das referências resolveu esse ponto bem
+  (nenhuma tinha rastreio público de verdade, todas exigiam login mesmo
+  do lado do cliente).
+- Testado via `EntregaRotaFlowIT` (2 testes: fluxo principal — roteirização
+  → reivindicação atômica com dois motoboys → sequência bloqueada fora de
   ordem → confirmação com pagamento → conclusão automática da rota →
-  comissão) usando o padrão de Nominatim falso embutido
-  (`com.sun.net.httpserver.HttpServer`) achado em `multlektec` — mesmo
-  padrão já usado nesta suíte pra `PdvSyncFlowIT`.
+  comissão → cancelamento de rota libera vendas; e um segundo teste —
+  ping de GPS → rastreio público muda conforme a fila anda → reconciliação
+  de dinheiro coletado com números exatos) usando o padrão de Nominatim
+  falso embutido (`com.sun.net.httpserver.HttpServer`) achado em
+  `multlektec` — mesmo padrão já usado nesta suíte pra `PdvSyncFlowIT`.
 
 ---
 

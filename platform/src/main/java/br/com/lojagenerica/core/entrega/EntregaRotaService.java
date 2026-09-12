@@ -36,6 +36,8 @@ import org.springframework.http.HttpStatus;
 public class EntregaRotaService {
 
     private static final String SETTING_COMISSAO_PERCENTUAL = "entrega.motoboy.comissao_percentual";
+    private static final String SETTING_VELOCIDADE_RASTREIO_KMH = "entrega.rastreio.velocidade_media_kmh";
+    private static final BigDecimal DEFAULT_VELOCIDADE_RASTREIO_KMH = new BigDecimal("25");
     private static final int MIN_VENDAS_ROTA = 2;
     private static final int MAX_VENDAS_ROTA = 12;
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -84,8 +86,10 @@ public class EntregaRotaService {
             Venda venda = vendas.stream().filter(v -> v.getId().equals(stopPlan.pedidoId())).findFirst()
                     .orElseThrow();
             EntregaParada parada = new EntregaParada(venda, stopPlan.ordem(), stopPlan.clienteNome(),
-                    stopPlan.enderecoEntrega(), gerarCodigoEntrega(), venda.getValorFrete());
+                    stopPlan.enderecoEntrega(), gerarCodigoEntrega(), venda.getValorFrete(),
+                    valorAindaAPagar(venda));
             parada.definirDistancias(stopPlan.distanciaAnteriorKm(), stopPlan.distanciaAcumuladaKm());
+            parada.definirCoordenadas(stopPlan.latitude(), stopPlan.longitude());
             rota.adicionarParada(parada);
         }
         return entregaRotaRepository.save(rota);
@@ -228,8 +232,22 @@ public class EntregaRotaService {
         BigDecimal percentual = rota.getPercentualComissaoSnapshot();
         BigDecimal freteConfirmado = somarFrete(rota, p -> p.getStatus() == StatusEntregaParada.ENTREGUE);
         BigDecimal freteProjetadoTotal = somarFrete(rota, p -> p.getStatus() != StatusEntregaParada.CANCELADA);
-        return new GanhoMotoboyView(percentual, comissaoSobre(freteConfirmado, percentual),
-                comissaoSobre(freteProjetadoTotal, percentual));
+        BigDecimal comissaoConfirmada = comissaoSobre(freteConfirmado, percentual);
+
+        // Reconciliação: quanto o motoboy coletou em espécie nas entregas já
+        // confirmadas (assume que "Dinheiro" cobriu o valor cheio ainda
+        // devido daquela venda) vs. quanto ele já garantiu de comissão —
+        // fica com a comissão do que coletou, devolve o resto pra loja; se
+        // coletou menos que a comissão total, a diferença é acertada à parte.
+        BigDecimal dinheiroColetado = rota.getParadas().stream()
+                .filter(p -> p.getStatus() == StatusEntregaParada.ENTREGUE && "Dinheiro".equalsIgnoreCase(p.getFormaPagamentoRecebida()))
+                .map(EntregaParada::getValorCobrarNaEntregaSnapshot)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal valorDevolverLoja = dinheiroColetado.subtract(comissaoConfirmada).max(BigDecimal.ZERO);
+        BigDecimal comissaoNaoCobertaPorDinheiro = comissaoConfirmada.subtract(dinheiroColetado).max(BigDecimal.ZERO);
+
+        return new GanhoMotoboyView(percentual, comissaoConfirmada, comissaoSobre(freteProjetadoTotal, percentual),
+                dinheiroColetado, valorDevolverLoja, comissaoNaoCobertaPorDinheiro);
     }
 
     private BigDecimal somarFrete(EntregaRota rota, java.util.function.Predicate<EntregaParada> filtro) {
@@ -322,8 +340,72 @@ public class EntregaRotaService {
         return String.valueOf(100000 + RANDOM.nextInt(900000));
     }
 
+    /** Total da venda menos pagamentos já registrados — o que ainda pode ser cobrado em espécie na entrega. */
+    private BigDecimal valorAindaAPagar(Venda venda) {
+        BigDecimal jaPago = venda.getPagamentos().stream().map(p -> p.getValor() != null ? p.getValor() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal restante = venda.getTotal().subtract(jaPago);
+        return restante.signum() > 0 ? restante : BigDecimal.ZERO;
+    }
+
+    /** Ping de GPS do motoboy — só o dono da rota, e só enquanto ela está em execução. */
+    @Transactional
+    public void atualizarLocalizacao(Long rotaId, Usuario motoboy, double latitude, double longitude) {
+        EntregaRota rota = validarPropriedadeEExecucao(rotaId, motoboy);
+        rota.atualizarLocalizacao(latitude, longitude);
+    }
+
+    /**
+     * Rastreio público — sem autenticação (o link vai pro cliente por
+     * WhatsApp/SMS). Só expõe o que é do próprio cliente: status da SUA
+     * parada, quantas entregas faltam antes da dele e um ETA estimado a
+     * partir da última posição conhecida do motoboy — nunca dados de
+     * outras paradas/vendas da rota.
+     */
+    @Transactional(readOnly = true)
+    public RastreioPublicoView obterRastreioPublico(java.util.UUID token) {
+        EntregaParada parada = entregaParadaRepository.findByTokenRastreioComRotaEParadas(token)
+                .orElseThrow(() -> new NoSuchElementException("Link de rastreio inválido"));
+        EntregaRota rota = parada.getRota();
+
+        long entregasAntes = rota.getParadas().stream()
+                .filter(p -> p.getOrdem() < parada.getOrdem() && !p.isConcluida())
+                .count();
+
+        Integer etaMinutos = null;
+        if (rota.getStatus() == StatusEntregaRota.EM_EXECUCAO && !parada.isConcluida()
+                && rota.getLocalizacaoLatitude() != null && parada.getLatitude() != null) {
+            double distanciaKm = distanciaHaversineKm(rota.getLocalizacaoLatitude(), rota.getLocalizacaoLongitude(),
+                    parada.getLatitude(), parada.getLongitude());
+            BigDecimal velocidade = appSettingService.getDecimal(SETTING_VELOCIDADE_RASTREIO_KMH, DEFAULT_VELOCIDADE_RASTREIO_KMH);
+            if (velocidade.signum() > 0) {
+                double horas = distanciaKm / velocidade.doubleValue();
+                etaMinutos = Math.max(1, (int) Math.round(horas * 60));
+            }
+        }
+
+        return new RastreioPublicoView(rota.getStatus(), parada.getStatus(), entregasAntes, etaMinutos,
+                rota.getLocalizacaoAtualizadaEm() != null);
+    }
+
+    private static double distanciaHaversineKm(double lat1, double lon1, double lat2, double lon2) {
+        double raioTerraKm = 6371.0088d;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return 2 * raioTerraKm * Math.asin(Math.sqrt(a));
+    }
+
     public record GanhoMotoboyView(BigDecimal percentualComissao, BigDecimal comissaoConfirmada,
-                                    BigDecimal comissaoProjetadaTotal) {
+                                    BigDecimal comissaoProjetadaTotal, BigDecimal dinheiroColetado,
+                                    BigDecimal valorDevolverLoja, BigDecimal comissaoNaoCobertaPorDinheiro) {
+    }
+
+    /** {@code etaMinutos} nulo quando ainda não dá pra estimar (rota não iniciada ou motoboy sem posição conhecida). */
+    public record RastreioPublicoView(StatusEntregaRota statusRota, StatusEntregaParada statusParada,
+                                       long entregasAntesDaSua, Integer etaMinutos, boolean localizacaoConhecida) {
     }
 
     public record ResumoComissaoMotoboyView(String motoboyNome, String motoboyEmail, long rotasConcluidas,

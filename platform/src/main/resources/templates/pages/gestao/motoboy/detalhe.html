@@ -9,6 +9,7 @@
 </head>
 <body>
   <div th:replace="~{fragments/gestao-nav :: nav}"></div>
+  <input type="hidden" id="csrf-token" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
   <main class="container mt-4 mb-8" style="max-width:560px;">
     <p><a th:href="@{/gestao/motoboy}">&larr; Minhas rotas</a></p>
     <h1 class="text-lg font-semibold mb-8" th:text="'Rota #' + ${rota.id}"></h1>
@@ -29,6 +30,17 @@
       <p><strong th:text="${ganho.percentualComissao}"></strong>% do frete de cada entrega.</p>
       <p>Comissão já confirmada: <strong th:text="'R$ ' + ${ganho.comissaoConfirmada}"></strong></p>
       <p>Comissão total prevista se completar a rota inteira: <strong th:text="'R$ ' + ${ganho.comissaoProjetadaTotal}"></strong></p>
+      <div th:if="${ganho.dinheiroColetado.signum() > 0}">
+        <p>Dinheiro coletado nas entregas: <strong th:text="'R$ ' + ${ganho.dinheiroColetado}"></strong></p>
+        <p>Você já fica com sua comissão do dinheiro que coletou.</p>
+        <p th:if="${ganho.valorDevolverLoja.signum() > 0}" style="font-size:1.1em;">
+          <strong>Devolver pro mercadinho: R$ <span th:text="${ganho.valorDevolverLoja}"></span></strong>
+        </p>
+      </div>
+      <p th:if="${ganho.comissaoNaoCobertaPorDinheiro.signum() > 0}">
+        Parte da comissão que não veio do dinheiro (acertar com a loja):
+        <strong th:text="'R$ ' + ${ganho.comissaoNaoCobertaPorDinheiro}"></strong>
+      </p>
     </section>
 
     <section class="card p-4" th:if="${proximaParada != null}">
@@ -38,6 +50,10 @@
       <p th:text="${proximaParada.enderecoEntregaSnapshot}"></p>
       <p>Código de entrega: <strong th:text="${proximaParada.codigoEntrega}"></strong></p>
       <p>Frete desta entrega: <strong th:text="'R$ ' + ${proximaParada.valorFreteSnapshot}"></strong></p>
+      <p>Link de rastreio pro cliente (mande por WhatsApp):
+        <a th:href="@{'/rastreio/' + ${proximaParada.tokenRastreio}}" target="_blank" rel="noopener"
+           th:text="@{'/rastreio/' + ${proximaParada.tokenRastreio}}"></a>
+      </p>
 
       <form th:if="${proximaParada.status.name() == 'A_CAMINHO'}"
             th:action="@{/gestao/motoboy/rotas/{id}/paradas/{paradaId}/chegada(id=${rota.id},paradaId=${proximaParada.id})}" method="post">
@@ -76,5 +92,44 @@
       <p>Nenhuma parada pendente — rota concluída.</p>
     </section>
   </main>
+
+  <script th:if="${rota.status.name() == 'EM_EXECUCAO'}" th:inline="javascript">
+    /*<![CDATA[*/
+    // Manda a posição do motoboy pro servidor a cada ~15s enquanto a rota
+    // estiver em execução — é o que alimenta o rastreio público do cliente
+    // (ETA/"quanto falta"). Só ativo nesta tela, com o celular na mão do
+    // motoboy; parar de abrir a tela simplesmente para de atualizar.
+    (function () {
+      const rotaId = /*[[${rota.id}]]*/ 0;
+      const csrfInput = document.getElementById('csrf-token');
+      const csrfNome = /*[[${_csrf.parameterName}]]*/ '_csrf';
+      let ultimoEnvioMs = 0;
+      const INTERVALO_MIN_MS = 15000;
+
+      function enviarPosicao(lat, lon) {
+        const agora = Date.now();
+        if (agora - ultimoEnvioMs < INTERVALO_MIN_MS) return;
+        ultimoEnvioMs = agora;
+        const corpo = new URLSearchParams();
+        corpo.set('latitude', String(lat));
+        corpo.set('longitude', String(lon));
+        corpo.set(csrfNome, csrfInput.value);
+        fetch('/gestao/motoboy/rotas/' + rotaId + '/localizacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: corpo.toString(),
+        }).catch(() => { /* falha de rede: tenta de novo no próximo ping, sem travar a tela */ });
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (pos) => enviarPosicao(pos.coords.latitude, pos.coords.longitude),
+          () => { /* motoboy negou permissão de localização — segue sem rastreio ao vivo */ },
+          { enableHighAccuracy: true, maximumAge: 10000 }
+        );
+      }
+    })();
+    /*]]>*/
+  </script>
 </body>
 </html>

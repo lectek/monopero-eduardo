@@ -79,6 +79,15 @@ public class EntregaRota {
     @Column(name = "cancelamento_motivo", length = 500)
     private String cancelamentoMotivo;
 
+    @Column(name = "localizacao_latitude")
+    private Double localizacaoLatitude;
+
+    @Column(name = "localizacao_longitude")
+    private Double localizacaoLongitude;
+
+    @Column(name = "localizacao_atualizada_em")
+    private Instant localizacaoAtualizadaEm;
+
     @OneToMany(mappedBy = "rota", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("ordem")
     private List<EntregaParada> paradas = new ArrayList<>();
@@ -126,6 +135,13 @@ public class EntregaRota {
         this.status = StatusEntregaRota.CANCELADA;
         this.canceladaEm = Instant.now();
         this.cancelamentoMotivo = motivo;
+    }
+
+    /** Ping de GPS do motoboy — sobrescreve a posição anterior, sem histórico (ver docs do módulo). */
+    public void atualizarLocalizacao(double latitude, double longitude) {
+        this.localizacaoLatitude = latitude;
+        this.localizacaoLongitude = longitude;
+        this.localizacaoAtualizadaEm = Instant.now();
     }
 
     public Long getId() {
@@ -182,6 +198,18 @@ public class EntregaRota {
 
     public String getCancelamentoMotivo() {
         return cancelamentoMotivo;
+    }
+
+    public Double getLocalizacaoLatitude() {
+        return localizacaoLatitude;
+    }
+
+    public Double getLocalizacaoLongitude() {
+        return localizacaoLongitude;
+    }
+
+    public Instant getLocalizacaoAtualizadaEm() {
+        return localizacaoAtualizadaEm;
     }
 
     public List<EntregaParada> getParadas() {

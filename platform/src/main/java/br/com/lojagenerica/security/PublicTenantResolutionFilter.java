@@ -14,13 +14,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Gate de {@code /api/public/**} e {@code /webhooks/**} (storefront e
- * checkout — sem JWT, ninguém logado ainda). {@link JwtAuthenticationFilter}
- * só resolve tenant pra {@code /api/v1/**}; sem este filtro, uma request
- * pública rodava com {@link TenantContext} nunca setado, e
- * {@code TenantGuard} falhava (fail-closed) na primeira chamada de
- * repositório do módulo core — foi assim que este gap foi descoberto (ver
- * CheckoutServiceIT).
+ * Gate de {@code /api/public/**}, {@code /webhooks/**} e {@code /rastreio/**}
+ * (storefront, checkout e o link público de rastreio de entrega — sem JWT,
+ * ninguém logado ainda). {@link JwtAuthenticationFilter} só resolve tenant
+ * pra {@code /api/v1/**}; sem este filtro, uma request pública rodava com
+ * {@link TenantContext} nunca setado, e {@code TenantGuard} falhava
+ * (fail-closed) na primeira chamada de repositório do módulo core — foi
+ * assim que este gap foi descoberto (ver CheckoutServiceIT).
  *
  * <p>Resolução por subdomínio primeiro (produção: {@code empresa.dominio.com}
  * -> {@code empresa.subdominio} no schema "plataforma"); no dev/teste, sem
@@ -43,7 +43,7 @@ public class PublicTenantResolutionFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return !(uri.startsWith("/api/public/") || uri.startsWith("/webhooks/"));
+        return !(uri.startsWith("/api/public/") || uri.startsWith("/webhooks/") || uri.startsWith("/rastreio/"));
     }
 
     @Override

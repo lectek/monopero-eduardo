@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Uma parada = uma venda dentro de uma rota. Nome/endereço são snapshots
@@ -51,6 +52,24 @@ public class EntregaParada {
 
     @Column(name = "valor_frete_snapshot", nullable = false, precision = 15, scale = 4)
     private BigDecimal valorFreteSnapshot;
+
+    /**
+     * Quanto ainda faltava pagar da venda quando a rota foi criada (total
+     * menos pagamentos já registrados) — o que o motoboy pode vir a cobrar
+     * em espécie na porta, distinto do frete. Ver
+     * {@link #confirmarEntrega} + reconciliação em
+     * {@code EntregaRotaService#calcularGanho}.
+     */
+    @Column(name = "valor_cobrar_na_entrega_snapshot", nullable = false, precision = 15, scale = 4)
+    private BigDecimal valorCobrarNaEntregaSnapshot;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    /** Link público de rastreio (`/rastreio/{token}`) — não exige login do cliente. */
+    @Column(name = "token_rastreio", nullable = false, unique = true, updatable = false)
+    private UUID tokenRastreio = UUID.randomUUID();
 
     @Column(name = "distancia_anterior_km", precision = 10, scale = 2)
     private BigDecimal distanciaAnteriorKm;
@@ -90,13 +109,14 @@ public class EntregaParada {
     }
 
     public EntregaParada(Venda venda, int ordem, String clienteNomeSnapshot, String enderecoEntregaSnapshot,
-                          String codigoEntrega, BigDecimal valorFreteSnapshot) {
+                          String codigoEntrega, BigDecimal valorFreteSnapshot, BigDecimal valorCobrarNaEntregaSnapshot) {
         this.venda = venda;
         this.ordem = ordem;
         this.clienteNomeSnapshot = clienteNomeSnapshot;
         this.enderecoEntregaSnapshot = enderecoEntregaSnapshot;
         this.codigoEntrega = codigoEntrega;
         this.valorFreteSnapshot = valorFreteSnapshot != null ? valorFreteSnapshot : BigDecimal.ZERO;
+        this.valorCobrarNaEntregaSnapshot = valorCobrarNaEntregaSnapshot != null ? valorCobrarNaEntregaSnapshot : BigDecimal.ZERO;
     }
 
     void pertencerA(EntregaRota rota) {
@@ -106,6 +126,11 @@ public class EntregaParada {
     public void definirDistancias(BigDecimal anteriorKm, BigDecimal acumuladaKm) {
         this.distanciaAnteriorKm = anteriorKm;
         this.distanciaAcumuladaKm = acumuladaKm;
+    }
+
+    public void definirCoordenadas(Double latitude, Double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     public void regenerarCodigo(String novoCodigo) {
@@ -190,6 +215,22 @@ public class EntregaParada {
 
     public BigDecimal getValorFreteSnapshot() {
         return valorFreteSnapshot;
+    }
+
+    public BigDecimal getValorCobrarNaEntregaSnapshot() {
+        return valorCobrarNaEntregaSnapshot;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public UUID getTokenRastreio() {
+        return tokenRastreio;
     }
 
     public BigDecimal getDistanciaAnteriorKm() {
