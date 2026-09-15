@@ -49,13 +49,15 @@ Lista viva — atualizada a cada corte de trabalho.
    tocados — ainda protegem `AdminPedidoController`
    (`/api/admin/pedidos`) e as telas `/admin/pedidos`/`/admin/produtos`,
    que continuam ativas e não têm relação com entrega.
-   - Achado no caminho, fora de escopo desta limpeza: `platform/docs/ECOSSISTEMA.md`
-     descreve inteiramente OUTRO projeto (`MiniMercadinhoSaaS`/"Mini
-     Mercadinho Rota", arquitetura SQLite+IMS+`rbp.db`) — foi copiado
-     durante o port e nunca atualizado pro `platform/` atual (multi-tenant,
-     Postgres). Não editado agora (é um documento inteiro desatualizado,
-     não um link morto pontual); considerar deletar ou reescrever numa
-     rodada de limpeza de documentação.
+   - Achado no caminho: `platform/docs/ECOSSISTEMA.md`, `FUNCIONALIDADES.md`
+     e `DEPLOY-LOJA.md` descreviam inteiramente OUTRO projeto
+     (`MiniMercadinhoSaaS`/"Mini Mercadinho Rota", arquitetura
+     SQLite+IMS+`rbp.db`) — copiados durante o port e nunca atualizados
+     pro `platform/` atual (multi-tenant, Postgres). Resolvido numa rodada
+     separada de limpeza de documentação: `docs/MAPA-APLICACAO.md` criado
+     (mapa técnico atual), `ECOSSISTEMA.md` removido (superado por ele),
+     `FUNCIONALIDADES.md` e `DEPLOY-LOJA.md` reescritos do zero pro estado
+     atual.
 
 3. **Teste manual numa máquina real com display** (ação do
    usuário/Eduardo, não automatizável nesta sessão) — cobre TRÊS

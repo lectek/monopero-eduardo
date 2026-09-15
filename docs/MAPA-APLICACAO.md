@@ -7,12 +7,13 @@ por fase, sempre a fonte da verdade sobre progresso) — este documento é o
 retrato estático de "o que tem e onde", pra alguém abrir o repositório e
 se situar rápido.
 
-> Dois documentos dentro de `platform/docs/` (`FUNCIONALIDADES.md` e
-> `ECOSSISTEMA.md`) descrevem um projeto **diferente** — o antigo
-> "Mini Mercadinho Rota"/MiniMercadinhoSaaS (SQLite, IMS Swing, arquitetura
-> pré-multiempresa) — copiados durante o port original e nunca atualizados.
-> Não confiar neles pro estado atual; ver `docs/ROADMAP.md` § "Limpo o
-> módulo de entrega antigo, órfão".
+> `platform/docs/FUNCIONALIDADES.md`, `ECOSSISTEMA.md` e `DEPLOY-LOJA.md`
+> descreviam o antigo "Mini Mercadinho Rota"/MiniMercadinhoSaaS (SQLite,
+> IMS Swing, arquitetura pré-multiempresa) — copiados durante o port
+> original e nunca atualizados até esta rodada de limpeza:
+> `FUNCIONALIDADES.md` e `DEPLOY-LOJA.md` foram reescritos pro estado
+> atual; `ECOSSISTEMA.md` foi removido (conteúdo superado por este
+> documento + `docs/CONTEXTO.md`).
 
 ---
 

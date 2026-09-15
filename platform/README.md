@@ -2,12 +2,11 @@
 
 Núcleo comercial genérico e configurável (Cadastros, Produtos, Estoque,
 Compras, Vendas/PDV, Financeiro, Fiscal, Relatórios etc. — ver
-`/home/alex/.claude/plans/bubbly-baking-donut.md` pro plano de fases
-completo). Nasceu adaptando o SaaS single-tenant "Mini Mercadinho Rota"
-(histórico em [`docs/ECOSSISTEMA.md`](docs/ECOSSISTEMA.md) e
-[`docs/DEPLOY-LOJA.md`](docs/DEPLOY-LOJA.md), preservados como referência)
-pra virar multiempresa de verdade: **schema Postgres separado por tenant**,
-sem lógica fixa de nenhum ramo de comércio específico.
+`../docs/ROADMAP.md` pro plano de fases completo e `../docs/MAPA-APLICACAO.md`
+pro mapa técnico do que já existe). Nasceu adaptando o SaaS single-tenant
+"Mini Mercadinho Rota" pra virar multiempresa de verdade: **schema
+Postgres separado por tenant**, sem lógica fixa de nenhum ramo de
+comércio específico. Guia de deploy em [`docs/DEPLOY-LOJA.md`](docs/DEPLOY-LOJA.md).
 
 O par desktop deste sistema — o PDV/caixa offline-first — vive em `../pdv`
 (adaptado de `raj-blow-plast-producao`, Java Swing).
@@ -46,8 +45,7 @@ aplicável por tenant.
 ## Reaproveitado de outros projetos do ecossistema
 
 Módulo de entrega, autenticação JWT, checkout Mercado Pago e boa parte do
-CSS/layout do site vieram do ParaisoPet — não foram reescritos do zero.
-Onde a adaptação foi mais que cosmética, o histórico está em
-`docs/ECOSSISTEMA.md`. O acoplamento antigo com a chave natural
-nome+cor+peso do IMS (`rbp.db`) está sendo removido nesta reescrita — ver
-o plano de fases pra detalhes (Fase A, módulo Produtos).
+CSS/layout do site vieram do ParaisoPet — não foram reescritos do zero
+(detalhes de cada adaptação em `../docs/MAPA-APLICACAO.md`). O
+acoplamento antigo com a chave natural nome+cor+peso do IMS (`rbp.db`) já
+foi removido nesta reescrita — ver `core.produto`.

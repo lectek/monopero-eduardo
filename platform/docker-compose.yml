@@ -44,6 +44,9 @@ services:
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
       OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      # Sem isto, POST /api/plataforma/empresas (criar uma empresa/tenant
+      # nova) fica desligado (503) — nunca aberto por acidente sem chave.
+      PLATFORM_ADMIN_KEY: ${PLATFORM_ADMIN_KEY:-}
 
   # Mantém o domínio público apontando pro IP público atual — a rede
   # provavelmente tem IP dinâmico, sem isso o domínio "quebra" toda vez que o
