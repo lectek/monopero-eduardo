@@ -266,6 +266,42 @@ usado como modelo principal do desenho abaixo.
   falso embutido (`com.sun.net.httpserver.HttpServer`) achado em
   `multlektec` — mesmo padrão já usado nesta suíte pra `PdvSyncFlowIT`.
 
+### Mapa, imprevistos e segurança na tela do motoboy (pedido explícito do usuário)
+
+- **Mapa da rota**: Leaflet + tiles OpenStreetMap (carregado via CDN no
+  navegador — mesmo ecossistema livre já usado por Nominatim/OSRM no
+  servidor), embutido na tela de detalhe do motoboy. Marcadores
+  numerados por parada (cor por status: laranja pendente/a caminho,
+  verde entregue, cinza cancelada) usando as coordenadas que o
+  `DeliveryRouteService` já calculava na criação da rota mas até a
+  rodada de rastreio (acima) nunca eram persistidas; um marcador azul
+  pra posição do motoboy, atualizado ao vivo pelo mesmo GPS que já
+  alimenta o rastreio público — sem chamada extra ao servidor, só lido
+  do `watchPosition` já existente.
+- **`EntregaOcorrencia`** (tabela nova, `core.entrega`): relato de
+  imprevisto ou segurança que o motoboy registra a qualquer momento
+  enquanto a rota está em execução — não só na parada atual (um
+  problema de trânsito ou de segurança pode acontecer entre duas
+  paradas) — e que **não muda o estado da rota nem da parada**, de
+  propósito: é um log informativo paralelo, não um bloqueio de fluxo
+  (diferente de `registrarFalha`, que já existia pra "não consegui
+  concluir esta entrega"). `TipoOcorrencia` cobre desde imprevistos
+  logísticos (trânsito, endereço não encontrado, veículo com problema,
+  clima, cliente ausente/recusou) até segurança de verdade (cliente
+  agressivo/ameaça, local inseguro, roubo/assalto, acidente, emergência
+  médica) — os últimos marcados `grave` no próprio enum.
+- **Segurança de verdade, não só um campo de texto perdido**: tipos
+  graves viram alerta ativo (`gravidade`/`resolvidoEm` denormalizados
+  pra consulta direta) — aparecem num banner vermelho no topo de
+  `/gestao/entregas` ("Alertas de segurança abertos"), com link direto
+  pra rota, até o admin marcar como resolvida. Antes desta rodada, o
+  campo `EntregaParada.ocorrencias` já existia no banco mas nenhuma
+  tela do motoboy tinha como preenchê-lo — a "segurança" era só uma
+  coluna que nunca era escrita nem lida por ninguém.
+- Testado via `EntregaRotaFlowIT` (terceiro teste): ocorrência leve não
+  vira alerta, ocorrência grave aparece no banner e no detalhe da rota,
+  resolver faz o banner sumir.
+
 ---
 
 ## ✅ Fase 0 — Fundação (concluída)

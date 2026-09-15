@@ -126,6 +126,8 @@ class EntregaRotaFlowIT {
     @Autowired
     private EntregaParadaRepository entregaParadaRepository;
     @Autowired
+    private EntregaOcorrenciaRepository entregaOcorrenciaRepository;
+    @Autowired
     private EntregaRotaService entregaRotaService;
     @Autowired
     private EmpresaRepository empresaRepository;
@@ -434,6 +436,124 @@ class EntregaRotaFlowIT {
             assertThat(ganho.comissaoConfirmada()).isEqualByComparingTo("8.00");
             assertThat(ganho.valorDevolverLoja()).isEqualByComparingTo("102.00");
             assertThat(ganho.comissaoNaoCobertaPorDinheiro()).isEqualByComparingTo("0.00");
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    /**
+     * Imprevisto/segurança: motoboy relata durante a rota (não bloqueia
+     * nem muda a parada), tipo grave vira alerta ativo pro admin em
+     * /gestao/entregas, some do alerta assim que resolvida.
+     */
+    @Test
+    void motoboyRelataOcorrenciaGraveViraAlertaProAdminEResolveSome() throws Exception {
+        String sufixo = "entrega-ocorrencia-" + System.nanoTime();
+        Empresa empresa = provisionamentoTenantService.provisionar(new ProvisionarEmpresaCommand(
+                sufixo, sufixo, null, sufixo, "Dono", "dono@" + sufixo + ".example", "senhaForte123"));
+        schema = empresa.getSchemaNome();
+
+        TenantContext.set(schema);
+        Long vendaId1;
+        Long vendaId2;
+        String emailMotoboy = "motoboy-ocorrencia@" + sufixo + ".example";
+        try {
+            Long unidadeId = unidadeMedidaRepository.save(new UnidadeMedida("UN", "Unidade", (short) 0, false)).getId();
+            Long localId = localEstoqueRepository.save(new LocalEstoque("Loja", "LOJA", true)).getId();
+            Long produtoId = produtoRepository.save(new Produto("Produto entregável",
+                    unidadeMedidaRepository.findById(unidadeId).orElseThrow())).getId();
+            Long formaPagamentoId = formaPagamentoRepository.save(
+                    new FormaPagamento("Dinheiro", NaturezaFormaPagamento.DINHEIRO, true)).getId();
+
+            vendaId1 = criarVendaEmEntrega(localId, produtoId, unidadeId, formaPagamentoId,
+                    "Rua das Flores, 100, João Pessoa", new BigDecimal("5.00"));
+            vendaId2 = criarVendaEmEntrega(localId, produtoId, unidadeId, formaPagamentoId,
+                    "Rua das Palmeiras, 200, João Pessoa", new BigDecimal("5.00"));
+
+            Permissao entregaExecutar = permissaoRepository.findByCodigo("ENTREGA_EXECUTAR").orElseThrow();
+            Papel papelMotoboy = papelRepository.save(new Papel("Motoboy", "Executa rotas de entrega", false));
+            papelMotoboy.getPermissoes().add(entregaExecutar);
+            papelMotoboy = papelRepository.save(papelMotoboy);
+            criarUsuarioComPapel(emailMotoboy, "Motoboy Ocorrência", papelMotoboy.getId());
+        } finally {
+            TenantContext.clear();
+        }
+        criarIdentidade(empresaRepository.findBySchemaNome(schema).orElseThrow(), emailMotoboy);
+
+        MockHttpSession sessaoDono = new MockHttpSession();
+        mockMvc.perform(post("/gestao/login").session(sessaoDono).with(csrf())
+                        .param("email", "dono@" + sufixo + ".example")
+                        .param("senha", "senhaForte123"))
+                .andExpect(status().is3xxRedirection());
+        MockHttpSession sessaoMotoboy = login(emailMotoboy, "senhaMotoboy123");
+
+        var criacao = mockMvc.perform(post("/gestao/entregas").session(sessaoDono).with(csrf())
+                        .param("vendaIds", String.valueOf(vendaId1), String.valueOf(vendaId2))
+                        .param("origem", "Loja Central, João Pessoa"))
+                .andExpect(redirectedUrlPattern("/gestao/entregas/rotas/*"))
+                .andReturn();
+        Long rotaId = Long.valueOf(criacao.getResponse().getRedirectedUrl()
+                .substring(criacao.getResponse().getRedirectedUrl().lastIndexOf('/') + 1));
+
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/iniciar", rotaId).session(sessaoMotoboy).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        // Ainda sem nenhuma ocorrência: sem alerta.
+        var listaAntes = mockMvc.perform(get("/gestao/entregas").session(sessaoDono)).andExpect(status().isOk()).andReturn();
+        assertThat(listaAntes.getResponse().getContentAsString()).doesNotContain("Alertas de segurança abertos");
+
+        // Ocorrência leve (não grave): registra, mas não vira alerta.
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/ocorrencias", rotaId).session(sessaoMotoboy).with(csrf())
+                        .param("tipo", "TRANSITO_OU_CONGESTIONAMENTO")
+                        .param("descricao", "Avenida bloqueada, indo por outra rua"))
+                .andExpect(status().is3xxRedirection());
+
+        var listaSoLeve = mockMvc.perform(get("/gestao/entregas").session(sessaoDono)).andExpect(status().isOk()).andReturn();
+        assertThat(listaSoLeve.getResponse().getContentAsString()).doesNotContain("Alertas de segurança abertos");
+
+        // Ocorrência grave: vira alerta ativo.
+        mockMvc.perform(post("/gestao/motoboy/rotas/{id}/ocorrencias", rotaId).session(sessaoMotoboy).with(csrf())
+                        .param("tipo", "CLIENTE_AGRESSIVO_OU_AMEACA")
+                        .param("descricao", "Cliente ameaçou na porta")
+                        .param("latitude", "-7.1195")
+                        .param("longitude", "-34.8450"))
+                .andExpect(status().is3xxRedirection());
+
+        var listaComAlerta = mockMvc.perform(get("/gestao/entregas").session(sessaoDono)).andExpect(status().isOk()).andReturn();
+        String corpoComAlerta = listaComAlerta.getResponse().getContentAsString();
+        assertThat(corpoComAlerta).contains("Alertas de segurança abertos");
+        assertThat(corpoComAlerta).contains("Rota");
+
+        var detalheComOcorrencias = mockMvc.perform(get("/gestao/entregas/rotas/{id}", rotaId).session(sessaoDono))
+                .andExpect(status().isOk()).andReturn();
+        String corpoDetalhe = detalheComOcorrencias.getResponse().getContentAsString();
+        assertThat(corpoDetalhe).contains("Cliente ameaçou na porta");
+        assertThat(corpoDetalhe).contains("Grave");
+
+        Long ocorrenciaGraveId;
+        TenantContext.set(schema);
+        try {
+            var ocorrencias = entregaOcorrenciaRepository.findByRotaIdOrderByCriadoEmDesc(rotaId);
+            assertThat(ocorrencias).hasSize(2);
+            ocorrenciaGraveId = ocorrencias.stream()
+                    .filter(o -> o.getTipo() == TipoOcorrencia.CLIENTE_AGRESSIVO_OU_AMEACA)
+                    .findFirst().orElseThrow().getId();
+        } finally {
+            TenantContext.clear();
+        }
+
+        // Admin resolve: some do alerta.
+        mockMvc.perform(post("/gestao/entregas/rotas/{id}/ocorrencias/{ocorrenciaId}/resolver", rotaId, ocorrenciaGraveId)
+                        .session(sessaoDono).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        var listaDepoisResolver = mockMvc.perform(get("/gestao/entregas").session(sessaoDono)).andExpect(status().isOk()).andReturn();
+        assertThat(listaDepoisResolver.getResponse().getContentAsString()).doesNotContain("Alertas de segurança abertos");
+
+        TenantContext.set(schema);
+        try {
+            EntregaOcorrencia resolvida = entregaOcorrenciaRepository.findById(ocorrenciaGraveId).orElseThrow();
+            assertThat(resolvida.isResolvida()).isTrue();
         } finally {
             TenantContext.clear();
         }

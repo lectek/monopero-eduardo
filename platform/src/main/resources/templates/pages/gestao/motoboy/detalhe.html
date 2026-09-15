@@ -6,6 +6,11 @@
   <title>Rota — Motoboy</title>
   <link rel="stylesheet" th:href="@{/css/main.css}" />
   <link rel="stylesheet" th:href="@{/css/gestao.css}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <style>
+    #mapa { height: 260px; border-radius: 12px; margin-bottom: 1rem; }
+    .card--emergencia { border: 2px solid var(--color-error, #c0392b); }
+  </style>
 </head>
 <body>
   <div th:replace="~{fragments/gestao-nav :: nav}"></div>
@@ -23,6 +28,14 @@
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <button class="btn btn--primary mt-4" type="submit">Iniciar rota</button>
       </form>
+    </section>
+
+    <section class="card p-4 mb-4" th:if="${!paradasMapa.isEmpty()}">
+      <h2 class="text-base font-semibold mb-8">Mapa da rota</h2>
+      <div id="mapa"></div>
+      <p style="font-size:0.85em;color:var(--color-neutral-6, #666);">
+        Numerado na ordem de entrega. O ponto azul é a sua posição (quando o navegador permitir).
+      </p>
     </section>
 
     <section class="card p-4 mb-4">
@@ -91,22 +104,103 @@
     <section class="card p-4" th:if="${proximaParada == null and rota.status.name() != 'PLANEJADA'}">
       <p>Nenhuma parada pendente — rota concluída.</p>
     </section>
+
+    <section class="card p-4 mt-4 card--emergencia" th:if="${rota.status.name() == 'EM_EXECUCAO'}">
+      <h2 class="text-base font-semibold mb-8">🆘 Imprevisto ou emergência</h2>
+      <p style="font-size:0.9em;">
+        Trânsito, endereço não encontrado, veículo com problema, ou uma situação de segurança
+        (ameaça, assédio, local perigoso, acidente) — relate aqui. Isso NÃO cancela a entrega nem
+        muda a rota; é só um alerta. Para tipos graves, o admin vê na hora.
+      </p>
+      <form id="form-ocorrencia" class="stack gap-8 mt-4"
+            th:action="@{/gestao/motoboy/rotas/{id}/ocorrencias(id=${rota.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="latitude" id="ocorrencia-lat" />
+        <input type="hidden" name="longitude" id="ocorrencia-lon" />
+        <select class="input" name="tipo" required="required">
+          <option value="">O que está acontecendo?</option>
+          <option th:each="tipo : ${tiposOcorrencia}" th:value="${tipo}"
+                  th:text="${(tipo.grave ? '🆘 ' : '') + #strings.replace(#strings.toLowerCase(tipo.name()), '_', ' ')}">
+          </option>
+        </select>
+        <input class="input" name="descricao" placeholder="Descreva rapidamente (opcional, mas ajuda)" />
+        <button class="btn btn--danger" type="submit">Relatar agora</button>
+      </form>
+    </section>
   </main>
 
-  <script th:if="${rota.status.name() == 'EM_EXECUCAO'}" th:inline="javascript">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script th:inline="javascript">
     /*<![CDATA[*/
-    // Manda a posição do motoboy pro servidor a cada ~15s enquanto a rota
-    // estiver em execução — é o que alimenta o rastreio público do cliente
-    // (ETA/"quanto falta"). Só ativo nesta tela, com o celular na mão do
-    // motoboy; parar de abrir a tela simplesmente para de atualizar.
     (function () {
+      const paradas = /*[[${paradasMapa}]]*/ [];
+      const localizacaoAtual = {
+        latitude: /*[[${rota.localizacaoLatitude}]]*/ null,
+        longitude: /*[[${rota.localizacaoLongitude}]]*/ null,
+      };
+
+      const mapaDiv = document.getElementById('mapa');
+      let mapa = null;
+      let marcadorMotoboy = null;
+      if (mapaDiv && typeof L !== 'undefined') {
+        mapa = L.map('mapa');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap',
+          maxZoom: 19,
+        }).addTo(mapa);
+
+        const pontos = [];
+        paradas.forEach((p) => {
+          if (p.latitude == null || p.longitude == null) return;
+          const cor = p.status === 'ENTREGUE' ? 'green' : (p.status === 'CANCELADA' ? 'gray' : 'orange');
+          const marcador = L.circleMarker([p.latitude, p.longitude], {
+            radius: 12, color: cor, fillColor: cor, fillOpacity: 0.85,
+          }).addTo(mapa);
+          marcador.bindTooltip(String(p.ordem) + '. ' + p.clienteNome, { permanent: false });
+          pontos.push([p.latitude, p.longitude]);
+        });
+
+        if (localizacaoAtual.latitude != null && localizacaoAtual.longitude != null) {
+          marcadorMotoboy = L.circleMarker([localizacaoAtual.latitude, localizacaoAtual.longitude], {
+            radius: 8, color: '#1a73e8', fillColor: '#1a73e8', fillOpacity: 1,
+          }).addTo(mapa);
+          pontos.push([localizacaoAtual.latitude, localizacaoAtual.longitude]);
+        }
+
+        if (pontos.length > 0) {
+          mapa.fitBounds(pontos, { padding: [30, 30] });
+        } else {
+          mapa.setView([-15.78, -47.93], 4); // Brasil, sem nenhuma coordenada conhecida ainda
+        }
+      }
+
+      const emExecucao = /*[[${rota.status.name() == 'EM_EXECUCAO'}]]*/ false;
+      if (!emExecucao || !navigator.geolocation) return;
+
       const rotaId = /*[[${rota.id}]]*/ 0;
       const csrfInput = document.getElementById('csrf-token');
       const csrfNome = /*[[${_csrf.parameterName}]]*/ '_csrf';
+      const latOcorrencia = document.getElementById('ocorrencia-lat');
+      const lonOcorrencia = document.getElementById('ocorrencia-lon');
       let ultimoEnvioMs = 0;
       const INTERVALO_MIN_MS = 15000;
 
+      function atualizarMarcadorLocal(lat, lon) {
+        if (!mapa) return;
+        if (!marcadorMotoboy) {
+          marcadorMotoboy = L.circleMarker([lat, lon], { radius: 8, color: '#1a73e8', fillColor: '#1a73e8', fillOpacity: 1 }).addTo(mapa);
+        } else {
+          marcadorMotoboy.setLatLng([lat, lon]);
+        }
+      }
+
       function enviarPosicao(lat, lon) {
+        // Preenche as coordenadas do formulário de ocorrência sempre — é a
+        // posição no momento de relatar, não a do último ping ao servidor.
+        if (latOcorrencia) latOcorrencia.value = String(lat);
+        if (lonOcorrencia) lonOcorrencia.value = String(lon);
+        atualizarMarcadorLocal(lat, lon);
+
         const agora = Date.now();
         if (agora - ultimoEnvioMs < INTERVALO_MIN_MS) return;
         ultimoEnvioMs = agora;
@@ -121,13 +215,11 @@
         }).catch(() => { /* falha de rede: tenta de novo no próximo ping, sem travar a tela */ });
       }
 
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-          (pos) => enviarPosicao(pos.coords.latitude, pos.coords.longitude),
-          () => { /* motoboy negou permissão de localização — segue sem rastreio ao vivo */ },
-          { enableHighAccuracy: true, maximumAge: 10000 }
-        );
-      }
+      navigator.geolocation.watchPosition(
+        (pos) => enviarPosicao(pos.coords.latitude, pos.coords.longitude),
+        () => { /* motoboy negou permissão de localização — segue sem rastreio ao vivo nem posição no mapa */ },
+        { enableHighAccuracy: true, maximumAge: 10000 }
+      );
     })();
     /*]]>*/
   </script>

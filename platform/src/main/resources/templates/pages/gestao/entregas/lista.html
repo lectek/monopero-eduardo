@@ -13,6 +13,17 @@
     <h1 class="text-lg font-semibold mb-16">Entregas</h1>
     <p class="mb-16"><a th:href="@{/gestao/entregas/comissoes}">Ver resumo de comissão por motoboy &rarr;</a></p>
 
+    <section class="card p-4 mb-4" style="border:2px solid var(--color-error, #c0392b);" th:if="${!alertasGraves.isEmpty()}">
+      <h2 class="text-base font-semibold mb-8">🆘 Alertas de segurança abertos</h2>
+      <div th:each="alerta : ${alertasGraves}" class="mb-8">
+        <p>
+          <strong th:text="${#strings.replace(#strings.toLowerCase(alerta.tipo.name()), '_', ' ')}"></strong>
+          — Rota <a th:href="@{/gestao/entregas/rotas/{id}(id=${alerta.rota.id})}" th:text="'#' + ${alerta.rota.id}"></a>
+          <span th:if="${alerta.descricao}" th:text="'— ' + ${alerta.descricao}"></span>
+        </p>
+      </div>
+    </section>
+
     <section class="card p-4 mb-4">
       <h2 class="text-base font-semibold mb-8">Vendas elegíveis para rota</h2>
       <p th:if="${vendasElegiveis.isEmpty()}">Nenhuma venda em modo ENTREGA aguardando roteirização.</p>

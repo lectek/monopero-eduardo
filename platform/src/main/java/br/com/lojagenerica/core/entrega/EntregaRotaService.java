@@ -45,15 +45,18 @@ public class EntregaRotaService {
     private final VendaRepository vendaRepository;
     private final EntregaRotaRepository entregaRotaRepository;
     private final EntregaParadaRepository entregaParadaRepository;
+    private final EntregaOcorrenciaRepository entregaOcorrenciaRepository;
     private final DeliveryRouteService deliveryRouteService;
     private final AppSettingService appSettingService;
 
     public EntregaRotaService(VendaRepository vendaRepository, EntregaRotaRepository entregaRotaRepository,
                                EntregaParadaRepository entregaParadaRepository,
+                               EntregaOcorrenciaRepository entregaOcorrenciaRepository,
                                DeliveryRouteService deliveryRouteService, AppSettingService appSettingService) {
         this.vendaRepository = vendaRepository;
         this.entregaRotaRepository = entregaRotaRepository;
         this.entregaParadaRepository = entregaParadaRepository;
+        this.entregaOcorrenciaRepository = entregaOcorrenciaRepository;
         this.deliveryRouteService = deliveryRouteService;
         this.appSettingService = appSettingService;
     }
@@ -187,6 +190,45 @@ public class EntregaRotaService {
         }
         rota.cancelar(motivo);
         return rota;
+    }
+
+    /**
+     * Relato de imprevisto/segurança — não muda o estado da rota nem da
+     * parada de propósito (diferente de {@link #registrarFalha}): é
+     * informativo, disponível o tempo todo enquanto a rota está em
+     * execução (não só na parada "atual"), porque um imprevisto de
+     * trânsito ou de segurança pode acontecer entre duas paradas.
+     * Tipos graves (ver {@link TipoOcorrencia#isGrave()}) viram alerta
+     * ativo pro admin em {@link #listarOcorrenciasGravesAbertas}.
+     */
+    @Transactional
+    public EntregaOcorrencia registrarOcorrencia(Long rotaId, Usuario motoboy, TipoOcorrencia tipo, String descricao,
+                                                  Double latitude, Double longitude) {
+        EntregaRota rota = validarPropriedadeEExecucao(rotaId, motoboy);
+        EntregaParada paradaAtual = proximaParadaAcionavel(rota).orElse(null);
+        EntregaOcorrencia ocorrencia = new EntregaOcorrencia(rota, paradaAtual, tipo, descricao, latitude, longitude,
+                motoboy.getId());
+        return entregaOcorrenciaRepository.save(ocorrencia);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntregaOcorrencia> listarOcorrenciasDaRota(Long rotaId) {
+        return entregaOcorrenciaRepository.findByRotaIdOrderByCriadoEmDesc(rotaId);
+    }
+
+    /** Base do banner de alerta no admin — ocorrências graves ainda sem {@code resolvidoEm}, de qualquer rota. */
+    @Transactional(readOnly = true)
+    public List<EntregaOcorrencia> listarOcorrenciasGravesAbertas() {
+        return entregaOcorrenciaRepository.findByGravidadeAndResolvidoEmIsNullOrderByCriadoEmDesc(
+                EntregaOcorrencia.Gravidade.GRAVE);
+    }
+
+    @Transactional
+    public EntregaOcorrencia resolverOcorrencia(Long ocorrenciaId, Long usuarioId) {
+        EntregaOcorrencia ocorrencia = entregaOcorrenciaRepository.findById(ocorrenciaId)
+                .orElseThrow(() -> new NoSuchElementException("Ocorrência " + ocorrenciaId + " não encontrada"));
+        ocorrencia.resolver(usuarioId);
+        return ocorrencia;
     }
 
     /**

@@ -2,9 +2,11 @@ package br.com.lojagenerica.gestao.web;
 
 import br.com.lojagenerica.core.acesso.Usuario;
 import br.com.lojagenerica.core.acesso.UsuarioRepository;
+import br.com.lojagenerica.core.entrega.EntregaParada;
 import br.com.lojagenerica.core.entrega.EntregaRota;
 import br.com.lojagenerica.core.entrega.EntregaRotaService;
 import br.com.lojagenerica.core.entrega.StatusEntregaParada;
+import br.com.lojagenerica.core.entrega.TipoOcorrencia;
 import br.com.lojagenerica.security.admin.AdminPrincipal;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -62,7 +64,25 @@ public class MotoboyController {
         model.addAttribute("rota", rota);
         model.addAttribute("ganho", entregaRotaService.calcularGanho(id));
         model.addAttribute("proximaParada", rota.getParadas().stream().filter(p -> !p.isConcluida()).findFirst().orElse(null));
+        model.addAttribute("paradasMapa", rota.getParadas().stream().map(ParadaMapaView::de).toList());
+        model.addAttribute("tiposOcorrencia", TipoOcorrencia.values());
         return "pages/gestao/motoboy/detalhe";
+    }
+
+    /**
+     * Relato de imprevisto/segurança — disponível o tempo todo enquanto a
+     * rota está em execução (não só na parada atual), porque trânsito ou
+     * um problema de segurança pode acontecer entre duas paradas. Não
+     * muda o estado da rota nem da parada (ver EntregaRotaService).
+     */
+    @PostMapping("/gestao/motoboy/rotas/{id}/ocorrencias")
+    public String registrarOcorrencia(@PathVariable Long id, @RequestParam @NotNull TipoOcorrencia tipo,
+                                       @RequestParam(required = false) String descricao,
+                                       @RequestParam(required = false) Double latitude,
+                                       @RequestParam(required = false) Double longitude,
+                                       @AuthenticationPrincipal AdminPrincipal principal) {
+        entregaRotaService.registrarOcorrencia(id, usuarioAutenticado(principal), tipo, descricao, latitude, longitude);
+        return REDIRECT_ROTA + id;
     }
 
     @PostMapping("/gestao/motoboy/rotas/{id}/iniciar")
@@ -117,5 +137,13 @@ public class MotoboyController {
     private Usuario usuarioAutenticado(AdminPrincipal principal) {
         return usuarioRepository.findById(principal.usuarioId())
                 .orElseThrow(() -> new NoSuchElementException("Usuário " + principal.usuarioId() + " não encontrado"));
+    }
+
+    /** Só o que o mapa Leaflet precisa — nunca serializar a entidade inteira (arrasta venda/rota lazy). */
+    public record ParadaMapaView(Long id, int ordem, String clienteNome, String status, Double latitude, Double longitude) {
+        static ParadaMapaView de(EntregaParada parada) {
+            return new ParadaMapaView(parada.getId(), parada.getOrdem(), parada.getClienteNomeSnapshot(),
+                    parada.getStatus().name(), parada.getLatitude(), parada.getLongitude());
+        }
     }
 }

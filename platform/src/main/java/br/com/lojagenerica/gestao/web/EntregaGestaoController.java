@@ -36,6 +36,7 @@ public class EntregaGestaoController {
     public String listar(Model model) {
         model.addAttribute("vendasElegiveis", entregaRotaService.listarVendasElegiveis());
         model.addAttribute("rotas", entregaRotaService.listarRotasRecentes());
+        model.addAttribute("alertasGraves", entregaRotaService.listarOcorrenciasGravesAbertas());
         return "pages/gestao/entregas/lista";
     }
 
@@ -67,7 +68,15 @@ public class EntregaGestaoController {
         EntregaRota rota = entregaRotaService.obterRota(id);
         model.addAttribute("rota", rota);
         model.addAttribute("ganho", entregaRotaService.calcularGanho(id));
+        model.addAttribute("ocorrencias", entregaRotaService.listarOcorrenciasDaRota(id));
         return "pages/gestao/entregas/detalhe";
+    }
+
+    @PostMapping("/gestao/entregas/rotas/{id}/ocorrencias/{ocorrenciaId}/resolver")
+    public String resolverOcorrencia(@PathVariable Long id, @PathVariable Long ocorrenciaId,
+                                      @AuthenticationPrincipal AdminPrincipal principal) {
+        entregaRotaService.resolverOcorrencia(ocorrenciaId, principal.usuarioId());
+        return "redirect:/gestao/entregas/rotas/" + id;
     }
 
     @PostMapping("/gestao/entregas/rotas/{id}/paradas/{paradaId}/regenerar-codigo")
