@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -557,6 +558,54 @@ class EntregaRotaFlowIT {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    /**
+     * Motoboy "puro" (só {@code ENTREGA_EXECUTAR}) cai direto em
+     * {@code /gestao/motoboy} depois do login, não na tela genérica de
+     * Cadastros que ele não tem permissão de usar; dono continua caindo
+     * em {@code /gestao}. O menu também só mostra o que cada um pode
+     * acessar de verdade — motoboy não vê "Marcas" (exige
+     * {@code CADASTRO_GERENCIAR}), dono vê.
+     */
+    @Test
+    void loginRedirecionaPorPapelEMenuSoMostraOQueOUsuarioPodeAcessar() throws Exception {
+        String sufixo = "entrega-login-" + System.nanoTime();
+        Empresa empresa = provisionamentoTenantService.provisionar(new ProvisionarEmpresaCommand(
+                sufixo, sufixo, null, sufixo, "Dono", "dono@" + sufixo + ".example", "senhaForte123"));
+        schema = empresa.getSchemaNome();
+
+        String emailMotoboy = "motoboy-login@" + sufixo + ".example";
+        TenantContext.set(schema);
+        try {
+            Permissao entregaExecutar = permissaoRepository.findByCodigo("ENTREGA_EXECUTAR").orElseThrow();
+            Papel papelMotoboy = papelRepository.save(new Papel("Motoboy", "Executa rotas de entrega", false));
+            papelMotoboy.getPermissoes().add(entregaExecutar);
+            papelMotoboy = papelRepository.save(papelMotoboy);
+            criarUsuarioComPapel(emailMotoboy, "Motoboy Login", papelMotoboy.getId());
+        } finally {
+            TenantContext.clear();
+        }
+        criarIdentidade(empresaRepository.findBySchemaNome(schema).orElseThrow(), emailMotoboy);
+
+        MockHttpSession sessaoDono = new MockHttpSession();
+        mockMvc.perform(post("/gestao/login").session(sessaoDono).with(csrf())
+                        .param("email", "dono@" + sufixo + ".example")
+                        .param("senha", "senhaForte123"))
+                .andExpect(redirectedUrl("/gestao"));
+
+        MockHttpSession sessaoMotoboy = new MockHttpSession();
+        mockMvc.perform(post("/gestao/login").session(sessaoMotoboy).with(csrf())
+                        .param("email", emailMotoboy)
+                        .param("senha", "senhaMotoboy123"))
+                .andExpect(redirectedUrl("/gestao/motoboy"));
+
+        var paginaDono = mockMvc.perform(get("/gestao").session(sessaoDono)).andExpect(status().isOk()).andReturn();
+        assertThat(paginaDono.getResponse().getContentAsString()).contains("/gestao/marcas");
+
+        var paginaMotoboy = mockMvc.perform(get("/gestao/motoboy").session(sessaoMotoboy))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(paginaMotoboy.getResponse().getContentAsString()).doesNotContain("/gestao/marcas");
     }
 
     /** Via RegistrarVendaCommand (não manipulando a entidade direto) — é o caminho real que o checkout usa. */

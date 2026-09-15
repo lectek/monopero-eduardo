@@ -46,7 +46,7 @@ public class AdminSecurityConfig {
                         .loginProcessingUrl("/gestao/login")
                         .usernameParameter("email")
                         .passwordParameter("senha")
-                        .defaultSuccessUrl("/gestao", true)
+                        .successHandler(new GestaoAuthenticationSuccessHandler())
                         .failureUrl("/gestao/login?erro")
                         .permitAll())
                 .logout(logout -> logout

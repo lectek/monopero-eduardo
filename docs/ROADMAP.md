@@ -189,6 +189,45 @@ abaixo neste documento, sem mudança de escopo por enquanto.
 
 ---
 
+## ✅ Auditoria de navegação em `/gestao/**` (pontos de entrada/saída)
+
+Pedido explícito do usuário ("pense no uso diário... controle de pontos
+de saída e entrada"). Achados, os 3 mais rápidos já corrigidos:
+
+- ✅ **Menu mentia sobre o que dava pra acessar**: de 10 links em
+  `fragments/gestao-nav.html`, só 2 (Entregas, Minhas rotas) eram
+  filtrados por permissão (`sec:authorize`) — os outros 8 (Produtos,
+  Marcas, Unidades, Formas de pagamento, Locais de estoque, Condições de
+  pagamento, Tipos de movimentação, Usuários, Papéis) apareciam pra
+  qualquer usuário logado, mesmo sem permissão nenhuma — um motoboy ou
+  um vendedor com papel estreito via um menu cheio de links que dão 403.
+  Corrigido: cada link agora tem o `sec:authorize` certo, mapeado direto
+  do `@PreAuthorize` do controller correspondente.
+- ✅ **Sem redirecionamento por papel após login**: todo mundo caía em
+  `/gestao` (tela genérica de "Cadastros") depois de logar, inclusive um
+  motoboy, que não tem permissão pra quase nada ali — precisava notar
+  sozinho o link "Minhas rotas". `GestaoAuthenticationSuccessHandler`
+  novo: motoboy "puro" (só `ENTREGA_EXECUTAR`, sem `CADASTRO_GERENCIAR`
+  — administrador tem os dois) cai direto em `/gestao/motoboy`; qualquer
+  link direto que tivesse motivado o redirect pro login (saved request)
+  continua respeitado primeiro, antes do destino por papel.
+- ✅ **Sem link de volta ao início no menu**: "Gestão" no canto do nav
+  era um `<span>`, não um link — só dava pra voltar digitando a URL ou
+  com o botão do navegador. Virou `<a th:href="@{/gestao}">`.
+- ⬜ **`/gestao` não é um dashboard** — hoje é só um título + um
+  parágrafo. Nenhum resumo do dia (alertas de segurança abertos, rotas
+  em andamento, estoque baixo) — fica pra quando o conteúdo do
+  dashboard for decidido com o usuário.
+- ⬜ **Falta tela de Venda/Cliente** — já documentado no item 1 acima;
+  reforçado aqui como o gap que mais afeta o uso diário fora do
+  PDV/checkout.
+
+Testado por um novo teste em `EntregaRotaFlowIT` (login de dono →
+`/gestao`, login de motoboy → `/gestao/motoboy`, menu do dono mostra
+"Marcas", menu do motoboy não mostra).
+
+---
+
 ## ✅ Módulo de entrega/motoboy (`core.entrega`) — concluído
 
 Pedido explícito do usuário ("vamos analisar as rotas dos motoboys"),
