@@ -25,9 +25,8 @@ import br.com.lojagenerica.core.produto.Produto;
 import br.com.lojagenerica.core.produto.ProdutoRepository;
 import br.com.lojagenerica.core.venda.CanalVenda;
 import br.com.lojagenerica.core.venda.RegistrarVendaCommand;
-import br.com.lojagenerica.core.venda.Venda;
-import br.com.lojagenerica.core.venda.VendaRepository;
 import br.com.lojagenerica.core.venda.VendaService;
+import br.com.lojagenerica.domain.enums.ModoEntrega;
 import br.com.lojagenerica.multitenancy.TenantContext;
 import br.com.lojagenerica.platform.ProvisionamentoTenantService;
 import br.com.lojagenerica.platform.ProvisionarEmpresaCommand;
@@ -114,8 +113,6 @@ class EntregaRotaFlowIT {
     private FormaPagamentoRepository formaPagamentoRepository;
     @Autowired
     private VendaService vendaService;
-    @Autowired
-    private VendaRepository vendaRepository;
     @Autowired
     private PapelRepository papelRepository;
     @Autowired
@@ -427,43 +424,41 @@ class EntregaRotaFlowIT {
                         .param("formaPagamentoRecebida", "Dinheiro"))
                 .andExpect(status().is3xxRedirection());
 
-        // Reconciliação: 2 vendas de 50,00 cada, nunca pagas antes -> motoboy coletou 100,00 em espécie.
-        // Comissão: 80% de (5,00 + 5,00) de frete = 8,00. Ele fica com os 8,00 e devolve 92,00 pra loja.
+        // Reconciliação: 2 vendas de 50,00 + frete 5,00 cada = 55,00 de total, nunca pagas antes ->
+        // motoboy coletou 110,00 em espécie. Comissão: 80% de (5,00 + 5,00) de frete = 8,00. Ele fica
+        // com os 8,00 e devolve 102,00 pra loja.
         TenantContext.set(schema);
         try {
             EntregaRotaService.GanhoMotoboyView ganho = entregaRotaService.calcularGanho(rotaId);
-            assertThat(ganho.dinheiroColetado()).isEqualByComparingTo("100.00");
+            assertThat(ganho.dinheiroColetado()).isEqualByComparingTo("110.00");
             assertThat(ganho.comissaoConfirmada()).isEqualByComparingTo("8.00");
-            assertThat(ganho.valorDevolverLoja()).isEqualByComparingTo("92.00");
+            assertThat(ganho.valorDevolverLoja()).isEqualByComparingTo("102.00");
             assertThat(ganho.comissaoNaoCobertaPorDinheiro()).isEqualByComparingTo("0.00");
         } finally {
             TenantContext.clear();
         }
     }
 
+    /** Via RegistrarVendaCommand (não manipulando a entidade direto) — é o caminho real que o checkout usa. */
     private Long criarVendaEmEntrega(Long localId, Long produtoId, Long unidadeId, Long formaPagamentoId,
                                       String endereco, BigDecimal frete) {
         RegistrarVendaCommand cmd = new RegistrarVendaCommand(null, CanalVenda.ONLINE, localId, null, null, null, null,
-                BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, frete, ModoEntrega.ENTREGA, endereco,
                 List.of(new RegistrarVendaCommand.ItemVendaCommand(produtoId, new BigDecimal("1"), unidadeId,
                         new BigDecimal("50.00"), BigDecimal.ZERO)),
                 List.of(new RegistrarVendaCommand.PagamentoVendaCommand(formaPagamentoId, new BigDecimal("58.00"),
                         new BigDecimal("58.00"), BigDecimal.ZERO)));
-        Venda venda = vendaService.registrar(cmd);
-        venda.definirEntrega(endereco, frete);
-        return vendaRepository.save(venda).getId();
+        return vendaService.registrar(cmd).getId();
     }
 
     /** COD: nenhum pagamento registrado ainda — o total inteiro fica pra cobrar na entrega. */
     private Long criarVendaEmEntregaSemPagamento(Long localId, Long produtoId, Long unidadeId, String endereco, BigDecimal frete) {
         RegistrarVendaCommand cmd = new RegistrarVendaCommand(null, CanalVenda.ONLINE, localId, null, null, null, null,
-                BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, frete, ModoEntrega.ENTREGA, endereco,
                 List.of(new RegistrarVendaCommand.ItemVendaCommand(produtoId, new BigDecimal("1"), unidadeId,
                         new BigDecimal("50.00"), BigDecimal.ZERO)),
                 List.of());
-        Venda venda = vendaService.registrar(cmd);
-        venda.definirEntrega(endereco, frete);
-        return vendaRepository.save(venda).getId();
+        return vendaService.registrar(cmd).getId();
     }
 
     private Long criarUsuarioComPapel(String email, String nome, Long papelId) {

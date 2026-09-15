@@ -8,19 +8,26 @@ import br.com.lojagenerica.core.cadastro.LocalEstoqueRepository;
 import br.com.lojagenerica.core.cadastro.NaturezaFormaPagamento;
 import br.com.lojagenerica.core.cadastro.UnidadeMedida;
 import br.com.lojagenerica.core.cadastro.UnidadeMedidaRepository;
+import br.com.lojagenerica.core.entrega.EntregaRotaService;
 import br.com.lojagenerica.core.estoque.MovimentacaoEstoqueService;
 import br.com.lojagenerica.core.estoque.OrigemMovimentacao;
 import br.com.lojagenerica.core.estoque.RegistrarMovimentacaoCommand;
 import br.com.lojagenerica.core.estoque.SaldoEstoqueRepository;
 import br.com.lojagenerica.core.produto.ProdutoService;
 import br.com.lojagenerica.core.venda.StatusVenda;
+import br.com.lojagenerica.core.venda.Venda;
 import br.com.lojagenerica.core.venda.VendaRepository;
 import br.com.lojagenerica.domain.enums.ModoEntrega;
 import br.com.lojagenerica.multitenancy.TenantContext;
 import br.com.lojagenerica.platform.ProvisionamentoTenantService;
 import br.com.lojagenerica.platform.ProvisionarEmpresaCommand;
 import br.com.lojagenerica.platform.domain.Empresa;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +40,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -51,6 +60,32 @@ class CheckoutServiceIT {
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    private static HttpServer fakeNominatim;
+
+    /** Mesmo padrão de Nominatim falso embutido usado em EntregaRotaFlowIT — evita rede real em teste. */
+    @DynamicPropertySource
+    static void propriedadesRota(DynamicPropertyRegistry registry) throws IOException {
+        fakeNominatim = HttpServer.create(new InetSocketAddress(0), 0);
+        fakeNominatim.createContext("/search", exchange -> {
+            byte[] corpo = "[{\"lat\":\"-7.1195\",\"lon\":\"-34.8450\"}]".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, corpo.length);
+            try (var saida = exchange.getResponseBody()) {
+                saida.write(corpo);
+            }
+        });
+        fakeNominatim.start();
+        registry.add("app.route.nominatim.base-url",
+                () -> "http://localhost:" + fakeNominatim.getAddress().getPort() + "/search");
+    }
+
+    @AfterAll
+    static void pararFakeNominatim() {
+        if (fakeNominatim != null) {
+            fakeNominatim.stop(0);
+        }
+    }
 
     @LocalServerPort
     private int port;
@@ -73,6 +108,8 @@ class CheckoutServiceIT {
     private ProdutoService produtoService;
     @Autowired
     private MovimentacaoEstoqueService movimentacaoEstoqueService;
+    @Autowired
+    private EntregaRotaService entregaRotaService;
 
     private String schema;
     private Long produtoId;
@@ -127,6 +164,60 @@ class CheckoutServiceIT {
         TenantContext.set(schema);
         try {
             assertThat(vendaRepository.findById(vendaId).orElseThrow().getStatus()).isEqualTo(StatusVenda.CONFIRMADA);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    /**
+     * Fecha o loop entre checkout e o módulo de entrega (core.entrega):
+     * até esta rodada, {@code modoEntrega}/{@code enderecoEntrega} eram
+     * capturados só pra calcular o frete e depois descartados — a venda
+     * nunca ficava marcada como ENTREGA de verdade, então nunca aparecia
+     * como elegível pra roteirização. Prova que hoje aparece.
+     */
+    @Test
+    void checkoutEmModoEntregaCobraFreteEVendaFicaElegivelParaRoteirizacao() {
+        String sufixo = "checkout-entrega-" + System.nanoTime();
+        Empresa empresa = provisionamentoTenantService.provisionar(new ProvisionarEmpresaCommand(
+                sufixo, sufixo, null, sufixo, "Dono", "dono@" + sufixo + ".example", "senhaForte123"));
+        schema = empresa.getSchemaNome();
+        prepararCadastros();
+
+        var itemRequest = new PublicCheckoutController.ItemCarrinhoRequest(produtoId, new BigDecimal("1"));
+        var request = new PublicCheckoutController.CriarPedidoRequest(
+                "Cliente Entrega", "cliente-entrega@" + sufixo + ".example", "83999999999",
+                java.util.List.of(itemRequest), ModoEntrega.ENTREGA, "Rua das Flores, 100, João Pessoa",
+                NaturezaFormaPagamento.DINHEIRO);
+
+        ResponseEntity<CheckoutService.CheckoutResultado> resposta = postPublico(
+                "/api/public/pedidos", request, CheckoutService.CheckoutResultado.class);
+        assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        Long vendaId = resposta.getBody().pedidoId();
+        assertThat(resposta.getBody().valorFrete()).isGreaterThan(BigDecimal.ZERO);
+
+        TenantContext.set(schema);
+        try {
+            Venda venda = vendaRepository.findById(vendaId).orElseThrow();
+            assertThat(venda.getModoEntrega()).isEqualTo(ModoEntrega.ENTREGA);
+            assertThat(venda.getEnderecoEntrega()).isEqualTo("Rua das Flores, 100, João Pessoa");
+            assertThat(venda.getValorFrete()).isEqualByComparingTo(resposta.getBody().valorFrete());
+            // Ainda em RASCUNHO: não aparece como elegível antes de o pagamento ser confirmado.
+            assertThat(entregaRotaService.listarVendasElegiveis()).extracting(Venda::getId).doesNotContain(vendaId);
+        } finally {
+            TenantContext.clear();
+        }
+
+        TenantContext.set(schema);
+        try {
+            checkoutService.confirmarRecebimentoDinheiro(vendaId);
+        } finally {
+            TenantContext.clear();
+        }
+
+        TenantContext.set(schema);
+        try {
+            assertThat(entregaRotaService.listarVendasElegiveis()).extracting(Venda::getId).contains(vendaId);
         } finally {
             TenantContext.clear();
         }

@@ -19,6 +19,7 @@ import br.com.lojagenerica.core.parceiro.Cliente;
 import br.com.lojagenerica.core.parceiro.ClienteRepository;
 import br.com.lojagenerica.core.produto.Produto;
 import br.com.lojagenerica.core.produto.ProdutoRepository;
+import br.com.lojagenerica.domain.enums.ModoEntrega;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
@@ -121,7 +122,9 @@ public class VendaService {
 
         validarDesconto(cmd.descontoValor(), venda.getSubtotal(), cmd.usuarioEmail());
         venda.aplicarDesconto(cmd.descontoValor());
-        if (cmd.acrescimo() != null) {
+        if (cmd.modoEntrega() == ModoEntrega.ENTREGA) {
+            venda.definirEntrega(cmd.enderecoEntrega(), cmd.acrescimo());
+        } else if (cmd.acrescimo() != null) {
             venda.aplicarAcrescimo(cmd.acrescimo());
         }
         venda.recalcularTotais();

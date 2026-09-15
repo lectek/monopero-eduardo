@@ -98,7 +98,7 @@ class VendaFlowIT {
 
         UUID uuidVenda = UUID.randomUUID();
         VendaController.RegistrarVendaRequest request = new VendaController.RegistrarVendaRequest(
-                uuidVenda, CanalVenda.PDV, localEstoqueId, null, null, null,
+                uuidVenda, CanalVenda.PDV, localEstoqueId, null, null, null, null, null, null,
                 List.of(new VendaController.ItemVendaRequest(produtoId, new BigDecimal("3"), unidadeId,
                         new BigDecimal("10.00"), null)),
                 List.of(new VendaController.PagamentoVendaRequest(formaPagamentoId, new BigDecimal("30.00"),

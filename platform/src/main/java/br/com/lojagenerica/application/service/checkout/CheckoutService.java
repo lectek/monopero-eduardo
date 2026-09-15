@@ -32,12 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link Venda} (via {@link VendaService#registrarPendente}) em vez de
  * {@code PedidoEntity}. Continua reaproveitando
  * {@link DeliveryPricingService} (frete) e {@link MercadoPagoCheckoutService}
- * (pagamento). O módulo de roteirização de entrega (rotas/motoboy) foi
- * removido nesta mesma reescrita — dependia de {@code PedidoEntity} e de
- * {@code AdminUserEntity} (não migrado pro modelo novo de acesso ainda);
- * vira módulo próprio numa fase futura, contra Venda+Usuario (ver
- * docs/ROADMAP.md). Até lá, "modo ENTREGA" só cobra o frete calculado —
- * não gera rota nem código de confirmação.
+ * (pagamento). "Modo ENTREGA" grava {@code modoEntrega}/{@code enderecoEntrega}
+ * na própria {@link Venda} (via {@code RegistrarVendaCommand}) — é isso que
+ * torna a venda elegível pro módulo {@code core.entrega} (roteirização de
+ * motoboy, ver {@code EntregaRotaService#listarVendasElegiveis}), sem
+ * precisar de nenhuma ação extra aqui.
  *
  * Baixa de estoque só acontece quando o pagamento é confirmado (a venda
  * fica em RASCUNHO até lá — ver VendaService), nunca na criação, pra
@@ -142,7 +141,7 @@ public class CheckoutService {
 
         Venda venda = vendaService.registrarPendente(new RegistrarVendaCommand(
                 UUID.randomUUID(), CanalVenda.ONLINE, local.getId(), cliente.getId(), null, null, null,
-                null, valorFrete, itensCmd, List.of()));
+                null, valorFrete, request.modoEntrega(), request.enderecoEntrega(), itensCmd, List.of()));
 
         MercadoPagoCheckoutService.CheckoutPreferenceResult checkout = null;
         if (isPagamentoOnline(request.tipoPagamento())) {

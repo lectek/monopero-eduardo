@@ -7,6 +7,7 @@ import br.com.lojagenerica.core.venda.RegistrarVendaCommand;
 import br.com.lojagenerica.core.venda.Venda;
 import br.com.lojagenerica.core.venda.VendaRepository;
 import br.com.lojagenerica.core.venda.VendaService;
+import br.com.lojagenerica.domain.enums.ModoEntrega;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -55,7 +56,8 @@ public class VendaController {
         Venda venda = vendaService.registrar(new RegistrarVendaCommand(
                 request.uuid() != null ? request.uuid() : UUID.randomUUID(),
                 request.canal(), request.localEstoqueId(), request.clienteId(), request.terminalId(),
-                usuarioId, email, request.descontoValor(), null,
+                usuarioId, email, request.descontoValor(), request.valorFrete(),
+                request.modoEntrega() != null ? request.modoEntrega() : ModoEntrega.RETIRADA, request.enderecoEntrega(),
                 request.itens().stream().map(i -> new RegistrarVendaCommand.ItemVendaCommand(
                         i.produtoId(), i.quantidade(), i.unidadeId(), i.precoUnitario(), i.descontoValor())).toList(),
                 request.pagamentos() == null ? List.of() : request.pagamentos().stream()
@@ -83,6 +85,7 @@ public class VendaController {
 
     public record RegistrarVendaRequest(UUID uuid, @NotNull CanalVenda canal, @NotNull Long localEstoqueId,
                                          Long clienteId, Long terminalId, BigDecimal descontoValor,
+                                         ModoEntrega modoEntrega, String enderecoEntrega, BigDecimal valorFrete,
                                          @NotEmpty List<ItemVendaRequest> itens,
                                          List<PagamentoVendaRequest> pagamentos) {
     }
@@ -95,11 +98,13 @@ public class VendaController {
     }
 
     public record VendaResponse(Long id, UUID uuid, String canal, String status, BigDecimal subtotal,
-                                 BigDecimal descontoValor, BigDecimal total, List<ItemVendaResponse> itens,
+                                 BigDecimal descontoValor, BigDecimal total, String modoEntrega,
+                                 String enderecoEntrega, BigDecimal valorFrete, List<ItemVendaResponse> itens,
                                  Instant canceladaEm) {
         static VendaResponse from(Venda v) {
             return new VendaResponse(v.getId(), v.getUuid(), v.getCanal().name(), v.getStatus().name(),
-                    v.getSubtotal(), v.getDescontoValor(), v.getTotal(),
+                    v.getSubtotal(), v.getDescontoValor(), v.getTotal(), v.getModoEntrega().name(),
+                    v.getEnderecoEntrega(), v.getValorFrete(),
                     v.getItens().stream().map(i -> new ItemVendaResponse(i.getId(), i.getProduto().getId(),
                             i.getDescricaoSnapshot(), i.getQuantidade(), i.getPrecoUnitario(), i.getTotalLinha())).toList(),
                     v.getCanceladaEm());

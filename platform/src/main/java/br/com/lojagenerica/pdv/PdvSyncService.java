@@ -13,6 +13,7 @@ import br.com.lojagenerica.core.venda.RegistrarVendaCommand;
 import br.com.lojagenerica.core.venda.Venda;
 import br.com.lojagenerica.core.venda.VendaRepository;
 import br.com.lojagenerica.core.venda.VendaService;
+import br.com.lojagenerica.domain.enums.ModoEntrega;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
@@ -150,7 +151,8 @@ public class PdvSyncService {
 
         return vendaService.registrar(new RegistrarVendaCommand(
                 evento.uuid(), CanalVenda.PDV, payload.localEstoqueId(), payload.clienteId(), terminalId,
-                payload.usuarioId(), usuarioEmail, payload.descontoValor(), null, itens, pagamentos));
+                payload.usuarioId(), usuarioEmail, payload.descontoValor(), null,
+                ModoEntrega.RETIRADA, null, itens, pagamentos));
     }
 
     private Venda cancelarVenda(EventoPushRequest evento) {

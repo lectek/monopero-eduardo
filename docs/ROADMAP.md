@@ -11,25 +11,29 @@ critério de saída (como saber que a fase terminou de verdade).
 
 ## 📍 Próximos passos (ordem de prioridade)
 
-Lista viva — atualizada a cada corte de trabalho. Reordenada depois do
-módulo de entrega/motoboy (`core.entrega`, concluído): o gap que ele
-deixou em aberto (nº 1 abaixo) sobe pro topo porque, sem ele, o módulo
-inteiro é inacessível no uso real — só foi exercitado em teste manipulando
-a entidade `Venda` direto, nunca pelo caminho que um usuário de verdade
-usaria.
+Lista viva — atualizada a cada corte de trabalho.
 
-1. **Fechar o loop do módulo de entrega: nada cria uma `Venda` em modo
-   ENTREGA hoje.** `RegistrarVendaCommand` (usado por `VendaController`,
-   `PdvSyncService` e — via `PedidoEntity`, caminho ainda mais velho —
-   `CheckoutService`) não tem campos de endereço/modo de entrega; a
-   única forma de uma venda chegar em `/gestao/entregas` como elegível
-   é chamar `venda.definirEntrega(...)` manualmente (é o que
-   `EntregaRotaFlowIT` faz). Precisa: adicionar
-   `modoEntrega`/`enderecoEntrega` ao `RegistrarVendaCommand` (e por
-   tabela a uma tela/campo de endereço no PDV ou no checkout online),
-   ou pelo menos uma ação "marcar como entrega" numa venda já
-   confirmada, direto em `/gestao/vendas` (tela que também não existe
-   ainda — hoje só existe criar/cancelar via API, sem CRUD web).
+1. ✅ **Fechado o loop do módulo de entrega.** `RegistrarVendaCommand`
+   ganhou `modoEntrega`/`enderecoEntrega` (reaproveitando `acrescimo`
+   como o valor do frete quando ENTREGA, via `Venda#definirEntrega`);
+   `VendaService.registrarPendente` aplica isso na venda. O checkout
+   online (`CheckoutService.criarPedido`) — que já calculava o frete
+   via `DeliveryPricingService` mas descartava `modoEntrega`/
+   `enderecoEntrega` depois de usá-los só pra cotação — agora passa os
+   dois adiante; a venda nasce marcada e some elegível em
+   `/gestao/entregas` assim que o pagamento confirma. `VendaController`
+   (API `/api/v1/vendas`) também expõe os campos; `PdvSyncService`
+   passa `RETIRADA` explícito (PDV ainda não vende com entrega — item
+   futuro). Provado ponta a ponta em `CheckoutServiceIT` (novo teste:
+   checkout ENTREGA → frete cobrado → venda invisível pro módulo
+   enquanto RASCUNHO → aparece em `listarVendasElegiveis()` assim que
+   confirma o pagamento).
+   - Ainda não existe: uma tela `/gestao/vendas` (CRUD web de vendas) —
+     hoje toda venda nasce só via API/checkout/PDV, sem tela de admin
+     pra criar ou marcar uma venda existente como entrega depois do
+     fato. Não bloqueia o módulo de entrega (o caminho real — checkout
+     — já funciona), mas seria necessário pra um cenário tipo "cliente
+     ligou pedindo entrega depois de já ter comprado no balcão".
 
 2. **Limpar o módulo de entrega antigo, órfão** —
    `pages/admin/entregas*.html`+`js/pages/admin/entregas*.js`,
