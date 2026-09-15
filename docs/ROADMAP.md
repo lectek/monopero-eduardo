@@ -70,10 +70,18 @@ Lista viva — atualizada a cada corte de trabalho.
      navegador real ainda, só testada via MockMvc.
    - Módulo de entrega especificamente: roteirizar uma venda de
      verdade, abrir a tela do motoboy no celular, testar o ping de GPS
-     (`navigator.geolocation`) e o link `/rastreio/{token}` num
-     segundo aparelho — geolocalização de navegador tem
-     comportamento/permissão que só aparece num dispositivo real.
+     (`navigator.geolocation`), o mapa (Leaflet carrega via CDN — testar
+     com internet real), relatar uma ocorrência grave e conferir o
+     banner em `/gestao/entregas` num segundo aparelho/aba logado como
+     admin, e o link `/rastreio/{token}` — geolocalização e permissão de
+     navegador só se comportam de verdade num dispositivo real.
    Qualquer problema de layout/usabilidade só aparece aqui.
+   - Achado ao revisar o próprio fluxo, ainda não corrigido: o banner de
+     alertas graves em `/gestao/entregas` só atualiza quando a página é
+     recarregada — um admin com a aba aberta não é avisado sozinho de
+     uma ocorrência nova. Mais barato que WebSocket: o mesmo
+     `<meta http-equiv="refresh">` já usado em `pages/rastreio.html`
+     resolveria isso com poucas linhas, se fizer sentido priorizar.
 
 4. **Login de operador no PDV** — hoje toda venda vai com `usuarioId`
    null, o que trava desconto (`VendaService.validarDesconto` exige
