@@ -35,16 +35,27 @@ Lista viva — atualizada a cada corte de trabalho.
      — já funciona), mas seria necessário pra um cenário tipo "cliente
      ligou pedindo entrega depois de já ter comprado no balcão".
 
-2. **Limpar o módulo de entrega antigo, órfão** —
-   `pages/admin/entregas*.html`+`js/pages/admin/entregas*.js`,
-   `pages/motoboy/*.html`+`js/pages/motoboy/*.js`, e o gate
-   `AdminJwtAuthFilter`/`/api/admin/**`/`/api/motoboy/**` que os
-   protegeria: nenhum desses arquivos é servido por controller nenhum
-   (`AdminMvcController` não tem rota pra `/admin/entregas` nem
-   `/motoboy`) — são leftovers do port original do ParaisoPet/Rota das
-   Praias, superados pelo módulo novo em `/gestao/entregas`+
-   `/gestao/motoboy`. Deletar evita confusão de quem for mexer aqui
-   depois (dois "módulos de entrega" no mesmo repo, um morto).
+2. ✅ **Limpo o módulo de entrega antigo, órfão.** Deletados
+   `pages/admin/entregas.html`+`entrega-detalhe.html`,
+   `pages/motoboy/rotas.html`+`rota-detalhe.html`,
+   `fragments/motoboy-nav.html` e os 4 JS correspondentes
+   (`js/pages/admin/entregas*.js`, `js/pages/motoboy/*.js`) — confirmado
+   antes de apagar que nenhum controller os servia
+   (`AdminMvcController` só mapeia `/admin/login`, `/admin/pedidos`,
+   `/admin/produtos`; nada pra `/admin/entregas` nem `/motoboy`) e que
+   nenhum outro código Java os referenciava por nome. Link morto
+   "Entregas" removido de `fragments/admin-nav.html`.
+   `AdminJwtAuthFilter`/`/api/admin/**`/`/api/motoboy/**` **não** foram
+   tocados — ainda protegem `AdminPedidoController`
+   (`/api/admin/pedidos`) e as telas `/admin/pedidos`/`/admin/produtos`,
+   que continuam ativas e não têm relação com entrega.
+   - Achado no caminho, fora de escopo desta limpeza: `platform/docs/ECOSSISTEMA.md`
+     descreve inteiramente OUTRO projeto (`MiniMercadinhoSaaS`/"Mini
+     Mercadinho Rota", arquitetura SQLite+IMS+`rbp.db`) — foi copiado
+     durante o port e nunca atualizado pro `platform/` atual (multi-tenant,
+     Postgres). Não editado agora (é um documento inteiro desatualizado,
+     não um link morto pontual); considerar deletar ou reescrever numa
+     rodada de limpeza de documentação.
 
 3. **Teste manual numa máquina real com display** (ação do
    usuário/Eduardo, não automatizável nesta sessão) — cobre TRÊS
